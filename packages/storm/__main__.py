@@ -341,13 +341,6 @@ def command_execute_offer(app, arguments):
 	# Parse arguments
 	parser = command_parser_platform("offer")
 	parser.add_argument(
-		"image_name",
-		metavar="image_name",
-		type=str,
-		nargs=1,
-		help=messages["argument"]["offer.image_name"]
-	)
-	parser.add_argument(
 		"source_dir",
 		metavar="source_dir",
 		type=str,
