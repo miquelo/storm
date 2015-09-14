@@ -42,14 +42,17 @@ class CommandError(Exception):
 def main():
 
 	# Look for data directory
-	if sys.platform == "darwin":
-		from AppKit import NSSearchPathForDirectoriesInDomains
-		ddp = NSSearchPathForDirectoriesInDomains(14, 1, True)
-		data_dir = os.path.join(ddp[0], application_name)
-	elif sys.platform == "win32":
-		appdata_dir = os.environ['APPDATA']
-		data_dir = os.path.join(appdata_dir, application_name)
-	else:
+	try:
+		if sys.platform == "darwin":
+			from AppKit import NSSearchPathForDirectoriesInDomains
+			ddp = NSSearchPathForDirectoriesInDomains(14, 1, True)
+			data_dir = os.path.join(ddp[0], application_name)
+		elif sys.platform == "win32":
+			appdata_dir = os.environ['APPDATA']
+			data_dir = os.path.join(appdata_dir, application_name)
+		else:
+			raise Exception("Unknown operating system")
+	except BaseException:
 		home_dir = os.environ["HOME"]
 		data_dir = os.path.join(home_dir, ".{}".format(application_name))
 		
@@ -167,12 +170,12 @@ def command_execute_platforms(app, arguments):
 		pr.print("{} ({})".format(plat_name, plat_def["provider"]))
 		
 #
-# Command DOMAINS
+# Command LAYOUTS
 #
-def command_execute_domains(app, arguments):
+def command_execute_layouts(app, arguments):
 
 	# Parse arguments
-	parser = command_parser("general", "domains")
+	parser = command_parser("general", "layouts")
 	parser.parse_args(arguments)
 
 #
@@ -245,7 +248,7 @@ def command_execute_stock(app, arguments):
 def command_execute_bind(app, arguments):
 	
 	# Parse arguments
-	parser = command_parser_domain("bind")
+	parser = command_parser_layout("bind")
 	parser.parse_args(arguments)
 	
 #
@@ -254,7 +257,7 @@ def command_execute_bind(app, arguments):
 def command_execute_leave(app, arguments):
 	
 	# Parse arguments
-	parser = command_parser_domain("leave")
+	parser = command_parser_layout("leave")
 	parser.parse_args(arguments)
 	
 #
@@ -263,7 +266,7 @@ def command_execute_leave(app, arguments):
 def command_execute_state(app, arguments):
 
 	# Parse arguments
-	parser = command_parser_domain("state")
+	parser = command_parser_layout("state")
 	parser.parse_args(arguments)
 	
 #
@@ -272,7 +275,7 @@ def command_execute_state(app, arguments):
 def command_execute_refresh(app, arguments):
 
 	# Parse arguments
-	parser = command_parser_domain("refresh")
+	parser = command_parser_layout("refresh")
 	parser.parse_args(arguments)
 	
 #
@@ -370,22 +373,22 @@ def command_parser_platform(name):
 	return parser
 	
 #
-# Create parser for domain command
+# Create parser for layout command
 #
-def command_parser_domain(name):
+def command_parser_layout(name):
 
 	messages = properties.load(__file__, "messages")
 	
-	def argparse_domain_name(domain_name):
-		return domain_name
+	def argparse_layout_name(layout_name):
+		return layout_name
 		
-	parser = command_parser("domain", name)
+	parser = command_parser("layout", name)
 	parser.add_argument(
-		"domain_name",
-		metavar="domain",
-		type=argparse_domain_name,
+		"layout_name",
+		metavar="layout",
+		type=argparse_layout_name,
 		nargs=1,
-		help=messages["argument"]["domain"]
+		help=messages["argument"]["layout"]
 	)
 	return parser
 	
