@@ -166,8 +166,8 @@ def command_execute_platforms(app, arguments):
 	parser.parse_args(arguments)
 	
 	pr = app.printer(sys.stdout)
-	for plat_name, plat_def in app.platforms().items():
-		pr.print("{} ({})".format(plat_name, plat_def["provider"]))
+	for plat_name, plat_data in app.platforms().items():
+		pr.print("{} ({})".format(plat_name, plat_data["provider"]))
 		
 #
 # Command LAYOUTS
@@ -177,6 +177,10 @@ def command_execute_layouts(app, arguments):
 	# Parse arguments
 	parser = command_parser("general", "layouts")
 	parser.parse_args(arguments)
+	
+	pr = app.printer(sys.stdout)
+	for lay_name, lay_data in app.layouts().items():
+		pr.print("{} at {}".format(lay_name, lay_data["directory"]))
 
 #
 # Command REGISTER
@@ -246,20 +250,69 @@ def command_execute_stock(app, arguments):
 # Command BIND
 #
 def command_execute_bind(app, arguments):
+
+	messages = properties.load(__file__, "messages")
 	
+	def argparse_directory(path):
+		if not os.path.exists(path):
+			msg = messages["error"]["dir_does_not_exists"].format(path)
+			raise argparse.ArgumentTypeError(msg)
+		if not os.path.isdir(path):
+			msg = messages["error"]["not_a_dir"].format(path)
+			raise argparse.ArgumentTypeError(msg)
+			
+		if os.path.isabs(path):
+			return path
+		return os.path.abspath(path)
+		
 	# Parse arguments
 	parser = command_parser_layout("bind")
-	parser.parse_args(arguments)
+	parser.add_argument(
+		"bound_dir",
+		metavar="directory",
+		type=argparse_directory,
+		nargs=1,
+		help=messages["argument"]["bind.directory"]
+	)
+	parser.add_argument(
+		"config_file",
+		metavar="config_file",
+		type=argparse.FileType("r"),
+		nargs="*",
+		help=messages["argument"]["bind.config_file"]
+	)
+	args = parser.parse_args(arguments)
 	
+	try:
+		config = config_collect(args.config_file)
+		app.bind(args.layout_name[0], args.bound_dir[0], config)
+	except BaseException as err:
+		raise CommandError(err)
+		
 #
 # Command LEAVE
 #
 def command_execute_leave(app, arguments):
 	
+	messages = properties.load(__file__, "messages")
+	
 	# Parse arguments
 	parser = command_parser_layout("leave")
-	parser.parse_args(arguments)
+	parser.add_argument(
+		"-d",
+		required=False,
+		action="store_true",
+		default=False,
+		dest="destroy",
+		help=messages["argument"]["leave.destroy"]
+	)
+	args = parser.parse_args(arguments)
 	
+	try:
+		app.leave(args.layout_name[0], args.destroy)
+	except BaseException as err:
+		raise CommandError(err)
+		
 #
 # Command STATE
 #

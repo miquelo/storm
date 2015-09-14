@@ -15,6 +15,7 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from storm import layout
 from storm import printer
 
 import importlib
@@ -31,16 +32,27 @@ class Application:
 	
 		self.__data_dir = data_dir
 		self.__platforms = {}
+		self.__layouts = {}
 		self.__printer_fact = printer.PrinterFactory()
 		
 		try:
 			config_file = self.__config_file_open("r")
 			config = json.loads(config_file.read())
-			for plat_name, plat_data in config["platforms"].items():
-				self.__platforms[plat_name] = {
-					"provider": plat_data["provider"],
-					"config": plat_data["config"]
-				}
+			
+			if "platforms" in config:
+				for plat_name, plat_data in config["platforms"].items():
+					self.__platforms[plat_name] = {
+						"provider": plat_data["provider"],
+						"config": plat_data["config"]
+					}
+					
+			if "layouts" in config:
+				for lay_name, lay_data in config["layouts"].items():
+					self.__layouts[lay_name] = {
+						"directory": lay_data["directory"],
+						"config": lay_data["config"]
+					}
+			
 			config_file.close()
 		except FileNotFoundError:
 			pass
@@ -82,6 +94,15 @@ class Application:
 		
 		return plat
 		
+	def __layout_load(self, name):
+	
+		try:
+			lay_data = self.__layouts[name]
+		except KeyError:
+			raise Exception("Layout '{}' does not exist".format(name))
+			
+		return layout.Layout(lay_data["directory"], lay_data["config"])
+		
 	@property
 	def printer_level(self):
 	
@@ -99,6 +120,10 @@ class Application:
 	def platforms(self):
 	
 		return self.__platforms
+		
+	def layouts(self):
+	
+		return self.__layouts
 		
 	def register(self, name, prov, config):
 	
@@ -134,13 +159,30 @@ class Application:
 		plat = self.__platform_load(name)
 		plat.delete(image_name)
 		
+	def bind(self, layout_name, bound_dir, config):
+	
+		self.__layouts[layout_name] = {
+			"directory": bound_dir,
+			"config": config
+		}
+		
+	def leave(self, name, destroy):
+	
+		lay = self.__layout_load(name)
+		if destroy:
+			lay.destroy()
+		del self.__layouts[name]
+		
 	def store(self):
 	
 		config = {
-			"platforms": {}
+			"platforms": {},
+			"layouts": {}
 		}
 		for plat_name, plat_data in self.__platforms.items():
 			config["platforms"][plat_name] = plat_data
+		for lay_name, lay_data in self.__layouts.items():
+			config["layouts"][lay_name] = lay_data
 			
 		config_file = self.__config_file_open("w")
 		config_file.write(json.dumps(config, sort_keys=True, indent=4))
