@@ -100,8 +100,18 @@ class Application:
 			lay_data = self.__layouts[name]
 		except KeyError:
 			raise Exception("Layout '{}' does not exist".format(name))
+		try:
+			lay_dir = lay_data["directory"]
+		except KeyError:
+			raise Exception("Layout directory is not defined")
+		if not os.path.exists(lay_dir):
+			raise Exception("Layout directory does not exist")
+		try:
+			config = lay_data["config"]
+		except KeyError:
+			config = {}
 			
-		return layout.Layout(lay_data["directory"], lay_data["config"])
+		return layout.Layout(lay_dir, config)
 		
 	@property
 	def printer_level(self):
