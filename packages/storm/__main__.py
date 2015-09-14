@@ -45,19 +45,19 @@ def main():
 	if sys.platform == "darwin":
 		from AppKit import NSSearchPathForDirectoriesInDomains
 		ddp = NSSearchPathForDirectoriesInDomains(14, 1, True)
-		datadir = os.path.join(ddp[0], application_name)
+		data_dir = os.path.join(ddp[0], application_name)
 	elif sys.platform == "win32":
-		appdatadir = os.environ['APPDATA']
-		datadir = os.path.join(appdatadir, application_name)
+		appdata_dir = os.environ['APPDATA']
+		data_dir = os.path.join(appdata_dir, application_name)
 	else:
-		homedir = os.environ["HOME"]
-		datadir = os.path.join(homedir, ".{}".format(application_name))
+		home_dir = os.environ["HOME"]
+		data_dir = os.path.join(home_dir, ".{}".format(application_name))
 		
-	if not os.path.exists(datadir):
-		os.mkdir(datadir)
+	if not os.path.exists(data_dir):
+		os.mkdir(data_dir)
 		
 	# Execute command
-	app = application.Application(datadir)
+	app = application.Application(data_dir)
 	
 	try:
 	
@@ -396,6 +396,6 @@ def config_collect(args_config_file):
 
 	config = {}
 	for config_file in args_config_file:
-		util.merge_dict(config, json.dumps( open(config_file, "r").read()))
+		util.merge_dict(config, json.loads(config_file.read()))
 	return config
 

@@ -20,15 +20,16 @@ from storm import printer
 import importlib
 import json
 import os
+import shutil
 
 #
 # Application
 #
 class Application:
 
-	def __init__(self, datadir):
+	def __init__(self, data_dir):
 	
-		self.__datadir = datadir
+		self.__data_dir = data_dir
 		self.__platforms = {}
 		self.__printer_fact = printer.PrinterFactory()
 		
@@ -46,14 +47,25 @@ class Application:
 		
 	def __config_file_open(self, oflags):
 	
-		 return open(os.path.join(self.__datadir, "config.json"), oflags)
-		 
-	def __platform_inst(self, class_name):
+		return open(os.path.join(self.__data_dir, "config.json"), oflags)
+		
+	def __platform_dir(self, name):
+	
+		platforms_dir = os.path.join(self.__data_dir, "platforms")
+		platform_dir = os.path.join(platforms_dir, name)
+		if not os.path.exists(platform_dir):
+			os.makedirs(platform_dir)
+		return platform_dir
+		
+	def __platform_inst(self, name, class_name):
 	
 		try:
 			p_mod_name, sep, p_class_name = class_name.rpartition(".")
 			p_mod = importlib.import_module(p_mod_name)
-			return getattr(p_mod, p_class_name)()
+			return getattr(p_mod, p_class_name)(
+				self.__platform_dir(name),
+				self.__printer_fact.printer
+			)
 		except BaseException:
 			err_msg = "Could not instantiate platform of with provider '{}'"
 			raise Exception(err_msg.format(class_name))
@@ -65,8 +77,9 @@ class Application:
 		except KeyError:
 			raise Exception("Platform '{}' does not exist".format(name))
 			
-		plat = self.__platform_inst(plat_data["provider"])
+		plat = self.__platform_inst(name, plat_data["provider"])
 		plat.load(plat_data["config"])
+		
 		return plat
 		
 	@property
@@ -92,7 +105,7 @@ class Application:
 		if name in self.__platforms:
 			raise Exception("Platform '{}' already exists".format(name))
 		
-		plat = self.__platform_inst(prov)
+		plat = self.__platform_inst(name, prov)
 		plat.configure(config)
 		
 		self.__platforms[name] = {
@@ -105,6 +118,7 @@ class Application:
 		plat = self.__platform_load(name)
 		if destroy:
 			plat.destroy()
+			shutil.rmtree(self.__platform_dir(name))
 		del self.__platforms[name]
 		
 	def offer(self, name, image_name, source_dir, config):
