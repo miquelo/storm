@@ -129,23 +129,7 @@ class Application:
 		
 		if "images" in images:
 			for image_data in images["images"]:
-				image_def = util.resolvable_dict(image_data, props)
-				ref = self.__image_ref(image_def)
-				if "extends" in image_def:
-					extends = self.__image_ref(image_def["extends"])
-				else:
-					extends = None
-				definition = image_def["definition"]
-				yield image.Image(name, ref, extends, definition)
-				
-	def __image_ref(self, ref_def):
-	
-		name = ref_def["name"]
-		if "version" in ref_def:
-			version = ref_def["version"]
-		else:
-			version = None
-		return image.ImageRef(name, version)
+				yield image.Image(util.resolvable_dict(image_data, props))
 		
 	@property
 	def printer_level(self):
