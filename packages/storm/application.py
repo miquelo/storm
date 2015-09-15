@@ -15,8 +15,10 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from storm import image
 from storm import layout
 from storm import printer
+from storm import util
 
 import importlib
 import json
@@ -113,6 +115,38 @@ class Application:
 			
 		return layout.Layout(lay_dir, config)
 		
+	def __images_load(self, source_dir, config=None):
+	
+		images_path = os.path.join(source_dir, "storm-images.json")
+		images = json.loads(open(images_path, "r").read())
+		
+		props = {}
+		if "properties" in images:
+			util.merge_dict(props, images["properties"])
+		if config is not None:
+			util.merge_dict(props, config)
+		props = util.resolvable_dict(props, props)
+		
+		if "images" in images:
+			for image_data in images["images"]:
+				image_def = util.resolvable_dict(image_data, props)
+				ref = self.__image_ref(image_def)
+				if "extends" in image_def:
+					extends = self.__image_ref(image_def["extends"])
+				else:
+					extends = None
+				definition = image_def["definition"]
+				yield image.Image(name, ref, extends, definition)
+				
+	def __image_ref(self, ref_def):
+	
+		name = ref_def["name"]
+		if "version" in ref_def:
+			version = ref_def["version"]
+		else:
+			version = None
+		return image.ImageRef(name, version)
+		
 	@property
 	def printer_level(self):
 	
@@ -156,18 +190,18 @@ class Application:
 			shutil.rmtree(self.__platform_dir(name))
 		del self.__platforms[name]
 		
-	def offer(self, name, image_name, source_dir, config):
+	def offer(self, name, source_dir, config):
 	
 		plat = self.__platform_load(name)
+		for image in self.__images_load(source_dir, config):
+			plat.build(image)
+			plat.publish(image)
 		
-		image_def = None # Retrieve from source_dir
-		plat.build(image_name, image_def, config)
-		plat.publish(image_name, image_def, config)
-		
-	def retire(self, name, image_name):
+	def retire(self, name, source_dir):
 	
 		plat = self.__platform_load(name)
-		plat.delete(image_name)
+		for image in self.__images_load(source_dir):
+			plat.delete(image)
 		
 	def bind(self, layout_name, bound_dir, config):
 	

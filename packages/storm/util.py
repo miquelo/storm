@@ -102,4 +102,8 @@ def resolve(r_in, r_out, r_vars):
 	while len(c) > 0:
 		resolver.update(c)
 		c = r_in.read(1)
+		
+def resolvable_dict(dict_obj, props):
+
+	return dict_obj
 

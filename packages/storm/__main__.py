@@ -35,6 +35,24 @@ class CommandError(Exception):
 	def __init__(self, args):
 	
 		super().__init__(args)
+
+#
+# Directory argument parsing
+#		
+def argparse_directory(path):
+
+	messages = properties.load(__file__, "messages")
+	
+	if not os.path.exists(path):
+		msg = messages["error"]["dir_does_not_exists"].format(path)
+		raise argparse.ArgumentTypeError(msg)
+	if not os.path.isdir(path):
+		msg = messages["error"]["not_a_dir"].format(path)
+		raise argparse.ArgumentTypeError(msg)
+		
+	if os.path.isabs(path):
+		return path
+	return os.path.abspath(path)
 		
 #
 # Main function
@@ -247,23 +265,68 @@ def command_execute_stock(app, arguments):
 	parser.parse_args(arguments)
 	
 #
+# Command OFFER
+#
+def command_execute_offer(app, arguments):
+
+	messages = properties.load(__file__, "messages")
+
+	# Parse arguments
+	parser = command_parser_platform("offer")
+	parser.add_argument(
+		"source_dir",
+		metavar="source_dir",
+		type=argparse_directory,
+		nargs=1,
+		help=messages["argument"]["offer.source_dir"]
+	)
+	parser.add_argument(
+		"config_file",
+		metavar="config_file",
+		type=argparse.FileType("r"),
+		nargs="*",
+		help=messages["argument"]["offer.config_file"]
+	)
+	args = parser.parse_args(arguments)
+	
+	try:
+		app.offer(
+			args.platform_name[0],
+			args.source_dir[0],
+			config_collect(args.config_file)
+		)
+	except BaseException as err:
+		raise CommandError(err)
+		
+#
+# Command RETIRE
+#
+def command_execute_retire(app, arguments):
+
+	messages = properties.load(__file__, "messages")
+
+	# Parse arguments
+	parser = command_parser_platform("retire")
+	parser.add_argument(
+		"source_dir",
+		metavar="source_dir",
+		type=argparse_directory,
+		nargs=1,
+		help=messages["argument"]["retire.source_dir"]
+	)
+	args = parser.parse_args(arguments)
+	
+	try:
+		app.retire(args.platform_name[0], args.image_name[0])
+	except BaseException as err:
+		raise CommandError(err)
+		
+#
 # Command BIND
 #
 def command_execute_bind(app, arguments):
 
 	messages = properties.load(__file__, "messages")
-	
-	def argparse_directory(path):
-		if not os.path.exists(path):
-			msg = messages["error"]["dir_does_not_exists"].format(path)
-			raise argparse.ArgumentTypeError(msg)
-		if not os.path.isdir(path):
-			msg = messages["error"]["not_a_dir"].format(path)
-			raise argparse.ArgumentTypeError(msg)
-			
-		if os.path.isabs(path):
-			return path
-		return os.path.abspath(path)
 		
 	# Parse arguments
 	parser = command_parser_layout("bind")
@@ -330,64 +393,6 @@ def command_execute_refresh(app, arguments):
 	# Parse arguments
 	parser = command_parser_layout("refresh")
 	parser.parse_args(arguments)
-	
-#
-# Command OFFER
-#
-def command_execute_offer(app, arguments):
-
-	messages = properties.load(__file__, "messages")
-
-	# Parse arguments
-	parser = command_parser_platform("offer")
-	parser.add_argument(
-		"source_dir",
-		metavar="source_dir",
-		type=str,
-		nargs=1,
-		help=messages["argument"]["offer.source_dir"]
-	)
-	parser.add_argument(
-		"config_file",
-		metavar="config_file",
-		type=argparse.FileType("r"),
-		nargs="*",
-		help=messages["argument"]["offer.config_file"]
-	)
-	args = parser.parse_args(arguments)
-	
-	try:
-		app.offer(
-			args.platform_name[0],
-			args.image_name[0],
-			args.source_dir[0],
-			config_collect(args.config_file)
-		)
-	except BaseException as err:
-		raise CommandError(err)
-		
-#
-# Command RETIRE
-#
-def command_execute_retire(app, arguments):
-
-	messages = properties.load(__file__, "messages")
-
-	# Parse arguments
-	parser = command_parser_platform("retire")
-	parser.add_argument(
-		"image_name",
-		metavar="image_name",
-		type=str,
-		nargs=1,
-		help=messages["argument"]["retire.image_name"]
-	)
-	args = parser.parse_args(arguments)
-	
-	try:
-		app.retire(args.platform_name[0], args.image_name[0])
-	except BaseException as err:
-		raise CommandError(err)
 	
 #
 # Create parser for command

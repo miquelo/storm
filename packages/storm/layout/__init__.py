@@ -25,7 +25,7 @@ class Layout:
 
 	def __init__(self, bound_dir, config):
 	
-		layout_path = os.path.join(bound_dir, "layout.json")
+		layout_path = os.path.join(bound_dir, "storm-layout.json")
 		layout_config = json.loads(open(layout_path, "r").read())
 		util.merge_dict(layout_config, config)
 		
