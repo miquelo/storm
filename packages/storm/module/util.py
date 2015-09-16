@@ -120,7 +120,92 @@ def resolve(r_in, r_out, r_vars):
 		resolver.update(c)
 		c = r_in.read(1)
 		
-def resolvable_dict(dict_obj, props):
+def resolvable(obj, props):
 
-	return dict_obj
+	def resolvable_result(obj):
+	
+		if isinstance(obj, list):
+			return ResolvableList(obj, props)
+		if isinstance(obj, dict):
+			return ResolvableDict(obj, props)
+		if isinstance(obj, str):
+			r_in = io.StringIO(str_obj)
+			r_out = io.StringIO()
+			resolve(r_in, r_out, props)
+			r_out.seek(0)
+			return r_out.read()
+		return obj
+		
+	class ResolvableList(list):
+	
+		def __init__(self, obj):
+		
+			self.extend(obj)
+			
+		def __getitem__(self, key):
+		
+			return resolvable_result(super().__getitem__(key))
+			
+		def __iter__(self):
+		
+			return ResolvableListIterator(super().__iter__())
+		
+		def __reversed__(self):
+		
+			return ResolvableListIterator(super().__reversed__())
+			
+	class ResolvableListIterator:
+	
+		def __init__(self, it):
+		
+			self.__it = it
+		
+		def __iter__(self):
+		
+			return self
+		
+		def __next__(self):
+		
+			return resolvable_result(self.__it.__next__())
+		
+	class ResolvableDict(dict):
+	
+		def __init__(self, obj):
+		
+			self.update(obj)
+			
+		def __getitem__(self, key):
+		
+			return resolvable_result(super().__getitem__(key))
+			
+		def __iter__(self):
+		
+			return ResolvableDictIterator(super().__iter__())
+		
+		def __reversed__(self):
+		
+			return ResolvableDictIterator(super().__reversed__())
+		
+		def items(self):
+		
+			return [
+				(key, resolvable_result(value))
+				for key, value in super().items()
+			]
+					
+	class ExpressionDictIterator:
+
+		def __init__(self, it):
+		
+			self.__it = it
+			
+		def __iter__(self):
+		
+			return self
+		
+		def __next__(self):
+		
+			return self.__it.__next__()
+			
+	return resolvable_result(obj)
 

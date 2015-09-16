@@ -126,11 +126,11 @@ class Engine:
 			util.merge_dict(props, images["properties"])
 		if config is not None:
 			util.merge_dict(props, config)
-		props = util.resolvable_dict(props, props)
+		props = util.resolvable(props, props)
 		
 		if "images" in images:
 			for image_data in images["images"]:
-				yield image.Image(util.resolvable_dict(image_data, props))
+				yield image.Image(util.resolvable(image_data, props))
 		
 	@property
 	def printer_level(self):
