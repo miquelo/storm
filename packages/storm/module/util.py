@@ -57,7 +57,7 @@ def call(call_dir, args, err_msg):
 			except KeyboardInterrupt:
 				raise Exception("{} still running...".format(cmd))
 		finally:
-			raise Exception("{} execution failed")
+			raise Exception("{} execution aborted")
 	finally:
 		os.chdir(orig_cwd)
 	

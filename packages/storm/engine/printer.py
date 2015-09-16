@@ -16,6 +16,7 @@
 #
 
 import importlib
+import io
 
 class PrinterFactory:
 
@@ -58,11 +59,23 @@ class PrinterBase:
 	
 		self.__out = out
 		self.__level = level
+		self.__buffer = io.StringIO()
 		
-	def print(self, text, level):
+	def append(self, text):
 	
+		self.__buffer.write(text)
+		return self
+		
+	def print(self, level=0):
+	
+		self.__buffer.seek(0)
 		if level <= self.__level:
-			self.__out.write("{}\n".format(text))
+			text = self.__buffer.read()
+			self.__out.write(text)
+			if len(text) > 0:
+				self.__out.write("\n")
+		self.__buffer = io.StringIO()
+		return self
 
 class PrinterDefault(PrinterBase):
 
@@ -70,9 +83,9 @@ class PrinterDefault(PrinterBase):
 	
 		super().__init__(out, level)
 			
-	def print(self, text, level=0, color=None, style=None):
+	def append(self, text, color=None, style=None):
 	
-		super().print(text, level)
+		return super().append(text)
 		
 class PrinterColorama(PrinterBase):
 	
@@ -91,7 +104,7 @@ class PrinterColorama(PrinterBase):
 		expr = "colorama.Style.{}".format(style.upper())
 		return eval(expr, None, { "colorama": self.__colorama })
 		
-	def print(self, text, level=0, color=None, style=None):
+	def append(self, text, color=None, style=None):
 	
 		tbeg = ""
 		tend = ""
@@ -105,5 +118,5 @@ class PrinterColorama(PrinterBase):
 			tend = "{}{}".format(self.__colorama.Style.RESET_ALL, tend)
 		except:
 			pass
-		super().print("{}{}{}".format(tbeg, text, tend), level)
+		return super().append("{}{}{}".format(tbeg, text, tend))
 

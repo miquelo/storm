@@ -146,7 +146,8 @@ def main():
 		err_msg = "{}".format(err)
 		if args.exceptions:
 			err_msg = "{}:\n{}".format(err_msg, traceback.format_exc())
-		pr.print(err_msg, 0, "red", "bright")
+		pr.append(err_msg, "red", "bright")
+		pr.print()
 		return 1
 		
 	finally:
@@ -170,10 +171,11 @@ def command_execute_commands(eng, arguments):
 			
 	# Print command descriptions
 	for group_name, group_desc in messages["command_group"].items():
-		pr.print("{}:".format(group_desc))
+		pr.append("{}:".format(group_desc))
 		command_group_name = "command_group_{}".format(group_name)
 		for cmd_name, cmd_desc in messages[command_group_name].items():
-			pr.print("  {}  {}".format(cmd_name.ljust(desc_pos), cmd_desc))
+			pr.append("\n  {}  {}".format(cmd_name.ljust(desc_pos), cmd_desc))
+		pr.print()
 			
 #
 # Command PLATFORMS
@@ -186,7 +188,8 @@ def command_execute_platforms(eng, arguments):
 	
 	pr = eng.printer(sys.stdout)
 	for plat_name, plat_data in eng.platforms().items():
-		pr.print("{} ({})".format(plat_name, plat_data["provider"]))
+		pr.append("{} ({})".format(plat_name, plat_data["provider"]))
+	pr.print()
 		
 #
 # Command LAYOUTS
@@ -199,7 +202,8 @@ def command_execute_layouts(eng, arguments):
 	
 	pr = eng.printer(sys.stdout)
 	for lay_name, lay_data in eng.layouts().items():
-		pr.print("{} at {}".format(lay_name, lay_data["directory"]))
+		pr.append("{} at {}".format(lay_name, lay_data["directory"]))
+	pr.print()
 
 #
 # Command REGISTER
