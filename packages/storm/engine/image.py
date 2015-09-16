@@ -15,16 +15,18 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os.path
+
 class Image:
 
-	def __init__(self, image_data):
+	def __init__(self, source_dir, image_data):
 	
 		self.__ref = ImageRef(image_data)
 		if "extends" in image_data:
 			self.__extends = ImageRef(image_data["extends"])
 		else:
 			self.__extends = None
-		self.__definition = ImageDef(image_data["definition"])
+		self.__definition = ImageDef(source_dir, image_data["definition"])
 		
 	@property
 	def ref(self):
@@ -63,12 +65,12 @@ class ImageRef:
 		
 class ImageDef:
 
-	def __init__(self, def_data):
+	def __init__(self, source_dir, def_data):
 	
 		self.__files = []
 		if "files" in def_data:
 			for file_data in def_data["files"]:
-				self.__files.append(ImageFile(file_data))
+				self.__files.append(ImageFile(source_dir, file_data))
 		self.__provision = []
 		if "provision" in def_data:
 			for prov_data in def_data["provision"]:
@@ -95,13 +97,24 @@ class ImageDef:
 		
 class ImageFile:
 
-	def __init__(self, file_data):
+	def __init__(self, source_dir, file_data):
 	
-		self.__source = file_data["source"]
-		if "target" in file_data:
-			self.__target = file_data["target"]
+		source = file_data["source"]
+		if os.path.isabs(source):
+			self.__source = source
 		else:
-			self.__target = self.__source
+			self.__source = os.path.join(source_dir, source)
+		if "target" in file_data:
+			target = file_data["target"]
+			if os.path.isabs(target):
+				raise Exception("Absolute target file path: {}".format(target))
+			self.__target = target
+		else:
+			self.__target = None
+		if "properties" in file_data:
+			self.__properties = file_data["properties"]
+		else:
+			self.__properties = {}
 			
 	@property
 	def source(self):
@@ -112,6 +125,11 @@ class ImageFile:
 	def target(self):
 	
 		return self.__target
+		
+	@property
+	def properties(self):
+	
+		return self.__properties
 		
 class ImageCommand:
 
