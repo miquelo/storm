@@ -38,9 +38,26 @@ def call(call_dir, args, err_msg):
 	try:
 		orig_cwd = os.getcwd()
 		os.chdir(call_dir)
-		res = subprocess.call(args)
-		if res != 0:
+		proc = subprocess.Popen(args)
+		if proc.wait() != 0:
 			raise RuntimeError(err_msg)
+	except KeyboardInterrupt:
+		try:
+			cmd = ""
+			sep = ""
+			for arg in args:
+				cmd = "{}{}{}".format(cmd, sep, arg)
+				sep = " "
+			proc.terminate()
+			proc.wait()
+		except KeyboardInterrupt:
+			try:
+				proc.kill()
+				proc.wait()
+			except KeyboardInterrupt:
+				raise Exception("{} still running...".format(cmd))
+		finally:
+			raise Exception("{} execution failed")
 	finally:
 		os.chdir(orig_cwd)
 	
