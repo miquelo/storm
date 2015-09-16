@@ -176,7 +176,7 @@ def command_execute_commands(eng, arguments):
 		for cmd_name, cmd_desc in messages[command_group_name].items():
 			pr.append("\n  {}  {}".format(cmd_name.ljust(desc_pos), cmd_desc))
 		pr.print()
-			
+		
 #
 # Command PLATFORMS
 #
