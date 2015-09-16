@@ -15,9 +15,10 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from storm import application
-from storm import properties
-from storm import util
+from storm import engine
+
+from storm.module import properties
+from storm.module import util
 
 import json
 import os.path
@@ -66,8 +67,8 @@ def main():
 			ddp = NSSearchPathForDirectoriesInDomains(14, 1, True)
 			data_dir = os.path.join(ddp[0], application_name)
 		elif sys.platform == "win32":
-			appdata_dir = os.environ['APPDATA']
-			data_dir = os.path.join(appdata_dir, application_name)
+			data_dir = os.environ['APPDATA']
+			data_dir = os.path.join(data_dir, application_name)
 		else:
 			raise Exception("Unknown operating system")
 	except BaseException:
@@ -78,7 +79,7 @@ def main():
 		os.mkdir(data_dir)
 		
 	# Execute command
-	app = application.Application(data_dir)
+	eng = engine.Engine(data_dir)
 	
 	try:
 	
@@ -130,18 +131,18 @@ def main():
 		
 		# Update printer level
 		if args.verbose:
-			app.printer_level = 1
+			eng.printer_level = 1
 		else:
-			app.printer_level = 0
+			eng.printer_level = 0
 			
 		# Execute the command
-		args.command[0](app, args.arguments)
+		args.command[0](eng, args.arguments)
 		return 0
 		
 	except CommandError as err:
 	
 		# Print error output
-		pr = app.printer(sys.stderr)
+		pr = eng.printer(sys.stderr)
 		err_msg = "{}".format(err)
 		if args.exceptions:
 			err_msg = "{}:\n{}".format(err_msg, traceback.format_exc())
@@ -150,16 +151,16 @@ def main():
 		
 	finally:
 	
-		# Store application configuration
-		app.store()
+		# Store engine configuration
+		eng.store()
 		
 #
 # Command COMMANDS
 #
-def command_execute_commands(app, arguments):
+def command_execute_commands(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
-	pr = app.printer(sys.stdout)
+	pr = eng.printer(sys.stdout)
 	
 	# Calculate description position
 	desc_pos = 0
@@ -177,33 +178,33 @@ def command_execute_commands(app, arguments):
 #
 # Command PLATFORMS
 #
-def command_execute_platforms(app, arguments):
+def command_execute_platforms(eng, arguments):
 
 	# Parse arguments
 	parser = command_parser("general", "platforms")
 	parser.parse_args(arguments)
 	
-	pr = app.printer(sys.stdout)
-	for plat_name, plat_data in app.platforms().items():
+	pr = eng.printer(sys.stdout)
+	for plat_name, plat_data in eng.platforms().items():
 		pr.print("{} ({})".format(plat_name, plat_data["provider"]))
 		
 #
 # Command LAYOUTS
 #
-def command_execute_layouts(app, arguments):
+def command_execute_layouts(eng, arguments):
 
 	# Parse arguments
 	parser = command_parser("general", "layouts")
 	parser.parse_args(arguments)
 	
-	pr = app.printer(sys.stdout)
-	for lay_name, lay_data in app.layouts().items():
+	pr = eng.printer(sys.stdout)
+	for lay_name, lay_data in eng.layouts().items():
 		pr.print("{} at {}".format(lay_name, lay_data["directory"]))
 
 #
 # Command REGISTER
 #
-def command_execute_register(app, arguments):
+def command_execute_register(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
 
@@ -227,14 +228,14 @@ def command_execute_register(app, arguments):
 	
 	try:
 		config = config_collect(args.config_file)
-		app.register(args.platform_name[0], args.provider[0], config)
+		eng.register(args.platform_name[0], args.provider[0], config)
 	except BaseException as err:
 		raise CommandError(err)
 		
 #
 # Command DISMISS
 #
-def command_execute_dismiss(app, arguments):
+def command_execute_dismiss(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
 
@@ -251,14 +252,14 @@ def command_execute_dismiss(app, arguments):
 	args = parser.parse_args(arguments)
 		
 	try:
-		app.dismiss(args.platform_name[0], args.destroy)
+		eng.dismiss(args.platform_name[0], args.destroy)
 	except BaseException as err:
 		raise CommandError(err)
 		
 #
 # Command STOCK
 #
-def command_execute_stock(app, arguments):
+def command_execute_stock(eng, arguments):
 
 	# Parse arguments
 	parser = command_parser_platform("stock")
@@ -267,7 +268,7 @@ def command_execute_stock(app, arguments):
 #
 # Command OFFER
 #
-def command_execute_offer(app, arguments):
+def command_execute_offer(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
 
@@ -290,7 +291,7 @@ def command_execute_offer(app, arguments):
 	args = parser.parse_args(arguments)
 	
 	try:
-		app.offer(
+		eng.offer(
 			args.platform_name[0],
 			args.source_dir[0],
 			config_collect(args.config_file)
@@ -301,7 +302,7 @@ def command_execute_offer(app, arguments):
 #
 # Command RETIRE
 #
-def command_execute_retire(app, arguments):
+def command_execute_retire(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
 
@@ -317,14 +318,14 @@ def command_execute_retire(app, arguments):
 	args = parser.parse_args(arguments)
 	
 	try:
-		app.retire(args.platform_name[0], args.image_name[0])
+		eng.retire(args.platform_name[0], args.image_name[0])
 	except BaseException as err:
 		raise CommandError(err)
 		
 #
 # Command BIND
 #
-def command_execute_bind(app, arguments):
+def command_execute_bind(eng, arguments):
 
 	messages = properties.load(__file__, "messages")
 		
@@ -348,14 +349,14 @@ def command_execute_bind(app, arguments):
 	
 	try:
 		config = config_collect(args.config_file)
-		app.bind(args.layout_name[0], args.bound_dir[0], config)
+		eng.bind(args.layout_name[0], args.bound_dir[0], config)
 	except BaseException as err:
 		raise CommandError(err)
 		
 #
 # Command LEAVE
 #
-def command_execute_leave(app, arguments):
+def command_execute_leave(eng, arguments):
 	
 	messages = properties.load(__file__, "messages")
 	
@@ -372,14 +373,14 @@ def command_execute_leave(app, arguments):
 	args = parser.parse_args(arguments)
 	
 	try:
-		app.leave(args.layout_name[0], args.destroy)
+		eng.leave(args.layout_name[0], args.destroy)
 	except BaseException as err:
 		raise CommandError(err)
 		
 #
 # Command STATE
 #
-def command_execute_state(app, arguments):
+def command_execute_state(eng, arguments):
 
 	# Parse arguments
 	parser = command_parser_layout("state")
@@ -388,7 +389,7 @@ def command_execute_state(app, arguments):
 #
 # Command REFRESH
 #
-def command_execute_refresh(app, arguments):
+def command_execute_refresh(eng, arguments):
 
 	# Parse arguments
 	parser = command_parser_layout("refresh")

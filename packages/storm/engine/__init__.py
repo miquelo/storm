@@ -15,10 +15,11 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from storm import image
-from storm import layout
-from storm import printer
-from storm import util
+from storm.engine import image
+from storm.engine import layout
+from storm.engine import printer
+
+from storm.module import util
 
 import importlib
 import json
@@ -26,9 +27,9 @@ import os
 import shutil
 
 #
-# Application
+# Engine
 #
-class Application:
+class Engine:
 
 	def __init__(self, data_dir):
 	

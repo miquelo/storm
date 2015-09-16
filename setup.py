@@ -22,7 +22,7 @@ import os.path
 
 def message_get(name):
 
-	path = "packages/storm"
+	path = "packages/storm/application"
 	props = configparser.ConfigParser()
 	moduledir = os.path.abspath(__file__)
 	propsdir = os.path.join(os.path.dirname(moduledir), path)
@@ -37,6 +37,9 @@ setup(
 	author_email="miquel.ferran.gonzalez@gmail.com",
 	
 	packages=find_packages("packages"),
+	namespace_packages=[
+		"storm"
+	],
 	package_dir={
 		"": "packages"
 	},
@@ -47,7 +50,7 @@ setup(
 	},
 	entry_points={
 		"console_scripts": [
-			"storm=storm.__main__:main"
+			"storm=storm.application.command:main"
 		]
 	},
 	url="http://pypi.python.org/pypi/storm_0.1.0/",
