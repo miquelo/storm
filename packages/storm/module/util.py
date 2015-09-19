@@ -16,7 +16,6 @@
 #
 
 import io
-import os
 import subprocess
 
 def merge_dict(source, other):
@@ -33,11 +32,14 @@ def merge_dict(source, other):
 		except KeyError:
 			source[key] = value
 			
-def call(call_dir, args, err_msg):
+def call(call_res, args, err_msg):
 	
 	try:
-		orig_cwd = os.getcwd()
-		os.chdir(call_dir)
+		call_dir = None
+		if call_res is not None:
+			call_dir = call_res.open("r")
+			old_dir = call_dir.change()
+			
 		proc = subprocess.Popen(args)
 		if proc.wait() != 0:
 			raise RuntimeError(err_msg)
@@ -57,10 +59,12 @@ def call(call_dir, args, err_msg):
 			except KeyboardInterrupt:
 				raise Exception("{} still running...".format(cmd))
 		finally:
-			raise Exception("{} execution aborted")
+			raise Exception("{} execution aborted".format(cmd))
 	finally:
-		os.chdir(orig_cwd)
-	
+		if call_dir is not None:
+			old_dir.change()
+			call_dir.close()
+			
 def resolve(r_in, r_out, r_vars):
 
 	class Resolver:
@@ -125,11 +129,11 @@ def resolvable(obj, props):
 	def resolvable_result(obj):
 	
 		if isinstance(obj, list):
-			return ResolvableList(obj, props)
+			return ResolvableList(obj)
 		if isinstance(obj, dict):
-			return ResolvableDict(obj, props)
+			return ResolvableDict(obj)
 		if isinstance(obj, str):
-			r_in = io.StringIO(str_obj)
+			r_in = io.StringIO(obj)
 			r_out = io.StringIO()
 			resolve(r_in, r_out, props)
 			r_out.seek(0)

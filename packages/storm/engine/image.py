@@ -19,14 +19,14 @@ import os.path
 
 class Image:
 
-	def __init__(self, source_dir, image_data):
+	def __init__(self, res_parent, image_data):
 	
 		self.__ref = ImageRef(image_data)
 		if "extends" in image_data:
 			self.__extends = ImageRef(image_data["extends"])
 		else:
 			self.__extends = None
-		self.__definition = ImageDef(source_dir, image_data["definition"])
+		self.__definition = ImageDef(res_parent, image_data["definition"])
 		
 	@property
 	def ref(self):
@@ -65,12 +65,12 @@ class ImageRef:
 		
 class ImageDef:
 
-	def __init__(self, source_dir, def_data):
+	def __init__(self, res_parent, def_data):
 	
-		self.__files = []
-		if "files" in def_data:
-			for file_data in def_data["files"]:
-				self.__files.append(ImageFile(source_dir, file_data))
+		self.__resources = []
+		if "resources" in def_data:
+			for res_data in def_data["resources"]:
+				self.__resources.append(ImageResource(dir_res, res_data))
 		self.__provision = []
 		if "provision" in def_data:
 			for prov_data in def_data["provision"]:
@@ -81,9 +81,9 @@ class ImageDef:
 				self.__execution.append(ImageCommand(exec_data))
 				
 	@property
-	def files(self):
+	def resources(self):
 	
-		return self.__files
+		return self.__resources
 		
 	@property
 	def provision(self):
@@ -95,22 +95,19 @@ class ImageDef:
 	
 		return self.__execution
 		
-class ImageFile:
+class ImageResource:
 
-	def __init__(self, source_dir, file_data):
+	def __init__(self, dir_res, res_data):
 	
-		source = file_data["source"]
-		if os.path.isabs(source):
+		source = resource.ref(res_data["source"])
+		if source.absolute:
 			self.__source = source
 		else:
-			self.__source = os.path.join(source_dir, source)
-		if "target" in file_data:
-			target = file_data["target"]
-			if os.path.isabs(target):
-				raise Exception("Absolute target file path: {}".format(target))
-			self.__target = target
-		else:
-			self.__target = None
+			self.__source = resource.ref(dir_res, source)
+		target = resource.ref(res_data["target"])
+		if target.absolute:
+			raise Exception("Absolute target path: {}".format(target))
+		self.__target = target
 		if "properties" in file_data:
 			self.__properties = file_data["properties"]
 		else:
@@ -119,7 +116,7 @@ class ImageFile:
 	@property
 	def source(self):
 	
-		return self.__source
+		return self.__source  
 		
 	@property
 	def target(self):

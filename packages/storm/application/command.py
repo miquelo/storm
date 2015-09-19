@@ -18,11 +18,12 @@
 from storm import engine
 
 from storm.module import properties
+from storm.module import resource
 from storm.module import util
 
 import json
-import os.path
 import argparse
+import os
 import sys
 import traceback
 
@@ -38,23 +39,18 @@ class CommandError(Exception):
 		super().__init__(args)
 
 #
-# Directory argument parsing
+# Resource argument parsing
 #		
-def argparse_directory(path):
+def argparse_resource(uri):
 
 	messages = properties.load(__file__, "messages")
 	
-	if not os.path.exists(path):
-		msg = messages["error"]["dir_does_not_exists"].format(path)
+	try:
+		return resource.ref(uri)
+	except:
+		msg = messages["error"]["invalid_resource_id"].format(uri)
 		raise argparse.ArgumentTypeError(msg)
-	if not os.path.isdir(path):
-		msg = messages["error"]["not_a_dir"].format(path)
-		raise argparse.ArgumentTypeError(msg)
-		
-	if os.path.isabs(path):
-		return path
-	return os.path.abspath(path)
-		
+	
 #
 # Main function
 #
@@ -65,21 +61,20 @@ def main():
 		if sys.platform == "darwin":
 			from AppKit import NSSearchPathForDirectoriesInDomains
 			ddp = NSSearchPathForDirectoriesInDomains(14, 1, True)
-			data_dir = os.path.join(ddp[0], application_name)
+			appdata_res = resource.ref(ddp[0])
+			data_res_name = application_name
 		elif sys.platform == "win32":
-			data_dir = os.environ['APPDATA']
-			data_dir = os.path.join(data_dir, application_name)
+			appdata_res = resource.ref(os.environ['APPDATA'])
+			data_res_name = application_name
 		else:
-			raise Exception("Unknown operating system")
+			raise LookupError("UNIX like application data directory")
 	except BaseException:
-		home_dir = os.environ["HOME"]
-		data_dir = os.path.join(home_dir, ".{}".format(application_name))
-		
-	if not os.path.exists(data_dir):
-		os.mkdir(data_dir)
+		appdata_res = resource.ref(os.environ["HOME"])
+		data_res_name = ".{}".format(application_name)
+	data_res = appdata_res.ref("{}/".format(data_res_name))
 		
 	# Execute command
-	eng = engine.Engine(data_dir)
+	eng = engine.Engine(data_res.ref("config.json"))
 	
 	try:
 	
@@ -202,7 +197,7 @@ def command_execute_layouts(eng, arguments):
 	
 	pr = eng.printer(sys.stdout)
 	for lay_name, lay_data in eng.layouts().items():
-		pr.append("{} at {}".format(lay_name, lay_data["directory"]))
+		pr.append("{} at {}".format(lay_name, lay_data["resource"]))
 	pr.print()
 
 #
@@ -222,17 +217,17 @@ def command_execute_register(eng, arguments):
 		help=messages["argument"]["register.provider"]
 	)
 	parser.add_argument(
-		"config_file",
-		metavar="config_file",
-		type=argparse.FileType("r"),
+		"props_res",
+		metavar="props_res",
+		type=argparse_resource,
 		nargs="*",
-		help=messages["argument"]["register.config_file"]
+		help=messages["argument"]["register.props_res"]
 	)
 	args = parser.parse_args(arguments)
 	
 	try:
-		config = config_collect(args.config_file)
-		eng.register(args.platform_name[0], args.provider[0], config)
+		props = props_collect(args.props_res)
+		eng.register(args.platform_name[0], args.provider[0], props)
 	except BaseException as err:
 		raise CommandError(err)
 		
@@ -279,26 +274,26 @@ def command_execute_offer(eng, arguments):
 	# Parse arguments
 	parser = command_parser_platform("offer")
 	parser.add_argument(
-		"source_dir",
-		metavar="source_dir",
-		type=argparse_directory,
+		"image_res",
+		metavar="image_res",
+		type=argparse_resource,
 		nargs=1,
-		help=messages["argument"]["offer.source_dir"]
+		help=messages["argument"]["offer.image_res"]
 	)
 	parser.add_argument(
-		"config_file",
-		metavar="config_file",
-		type=argparse.FileType("r"),
+		"props_res",
+		metavar="props_res",
+		type=argparse_resource,
 		nargs="*",
-		help=messages["argument"]["offer.config_file"]
+		help=messages["argument"]["offer.props_res"]
 	)
 	args = parser.parse_args(arguments)
 	
 	try:
 		eng.offer(
 			args.platform_name[0],
-			args.source_dir[0],
-			config_collect(args.config_file)
+			args.image_res[0],
+			props_collect(args.props_res)
 		)
 	except BaseException as err:
 		raise CommandError(err)
@@ -313,16 +308,16 @@ def command_execute_retire(eng, arguments):
 	# Parse arguments
 	parser = command_parser_platform("retire")
 	parser.add_argument(
-		"source_dir",
-		metavar="source_dir",
-		type=argparse_directory,
+		"image_res",
+		metavar="image_res",
+		type=argparse_resource,
 		nargs=1,
-		help=messages["argument"]["retire.source_dir"]
+		help=messages["argument"]["retire.image_res"]
 	)
 	args = parser.parse_args(arguments)
 	
 	try:
-		eng.retire(args.platform_name[0], args.image_name[0])
+		eng.retire(args.platform_name[0], args.image_res[0])
 	except BaseException as err:
 		raise CommandError(err)
 		
@@ -336,24 +331,24 @@ def command_execute_bind(eng, arguments):
 	# Parse arguments
 	parser = command_parser_layout("bind")
 	parser.add_argument(
-		"bound_dir",
-		metavar="directory",
-		type=argparse_directory,
+		"layout_res",
+		metavar="layout_res",
+		type=argparse_resource,
 		nargs=1,
-		help=messages["argument"]["bind.directory"]
+		help=messages["argument"]["bind.layout_res"]
 	)
 	parser.add_argument(
-		"config_file",
-		metavar="config_file",
-		type=argparse.FileType("r"),
+		"props_res",
+		metavar="props_res",
+		type=argparse_resource,
 		nargs="*",
-		help=messages["argument"]["bind.config_file"]
+		help=messages["argument"]["bind.props_res"]
 	)
 	args = parser.parse_args(arguments)
 	
 	try:
-		config = config_collect(args.config_file)
-		eng.bind(args.layout_name[0], args.bound_dir[0], config)
+		props = props_collect(args.props_res)
+		eng.bind(args.layout_name[0], args.layout_res[0], props)
 	except BaseException as err:
 		raise CommandError(err)
 		
@@ -449,12 +444,14 @@ def command_parser_layout(name):
 	return parser
 	
 #
-# Collect configuration from files
+# Collect properties from files
 #
-def config_collect(args_config_file):
+def props_collect(args_props_res):
 
-	config = {}
-	for config_file in args_config_file:
-		util.merge_dict(config, json.loads(config_file.read()))
-	return config
+	props = {}
+	for props_res in args_props_res:
+		props_file = props_res.open("r")
+		util.merge_dict(props, json.loads(props_file.read()))
+		props_file.close()
+	return props
 

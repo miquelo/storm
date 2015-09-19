@@ -19,11 +19,11 @@ from storm.engine import image
 from storm.engine import layout
 from storm.engine import printer
 
+from storm.module import resource
 from storm.module import util
 
 import importlib
 import json
-import os
 import shutil
 
 #
@@ -31,59 +31,52 @@ import shutil
 #
 class Engine:
 
-	def __init__(self, data_dir):
+	def __init__(self, config_res):
 	
-		self.__data_dir = data_dir
+		self.__config_res = config_res
 		self.__platforms = {}
 		self.__layouts = {}
 		self.__printer_fact = printer.PrinterFactory()
 		
 		try:
-			config_file = self.__config_file_open("r")
+			config_file = self.__config_res.open("r")
 			config = json.loads(config_file.read())
 			
 			if "platforms" in config:
 				for plat_name, plat_data in config["platforms"].items():
 					self.__platforms[plat_name] = {
 						"provider": plat_data["provider"],
-						"config": plat_data["config"]
+						"properties": plat_data["properties"]
 					}
 					
 			if "layouts" in config:
 				for lay_name, lay_data in config["layouts"].items():
 					self.__layouts[lay_name] = {
-						"directory": lay_data["directory"],
-						"config": lay_data["config"]
+						"resource": lay_data["resource"],
+						"properties": lay_data["properties"]
 					}
 			
 			config_file.close()
-		except FileNotFoundError:
+		except resource.ResourceNotFoundError:
 			pass
 		
-	def __config_file_open(self, oflags):
+	def __platform_res(self, name):
 	
-		return open(os.path.join(self.__data_dir, "config.json"), oflags)
+		platforms_res = self.__config_res.parent().ref("platforms")
+		return platforms_res.ref(name)
 		
-	def __platform_dir(self, name):
-	
-		platforms_dir = os.path.join(self.__data_dir, "platforms")
-		platform_dir = os.path.join(platforms_dir, name)
-		if not os.path.exists(platform_dir):
-			os.makedirs(platform_dir)
-		return platform_dir
-		
-	def __platform_inst(self, name, class_name):
+	def __platform_inst(self, name, prov):
 	
 		try:
-			p_mod_name, sep, p_class_name = class_name.rpartition(".")
+			p_mod_name = "storm.provider.platform.{}".format(prov)
 			p_mod = importlib.import_module(p_mod_name)
-			return getattr(p_mod, p_class_name)(
-				self.__platform_dir(name),
+			return p_mod.Platform(
+				self.__platform_res(name),
 				self.__printer_fact.printer
 			)
 		except BaseException:
 			err_msg = "Could not instantiate platform of with provider '{}'"
-			raise Exception(err_msg.format(class_name))
+			raise Exception(err_msg.format(prov))
 			
 	def __platform_load(self, name):
 	
@@ -93,43 +86,51 @@ class Engine:
 			raise Exception("Platform '{}' does not exist".format(name))
 			
 		plat = self.__platform_inst(name, plat_data["provider"])
-		plat.load(plat_data["config"])
+		plat.load(plat_data["properties"])
 		
 		return plat
 		
 	def __layout_load(self, name):
 	
 		try:
-			lay_data = self.__layouts[name]
+			layout_data = self.__layouts[name]
 		except KeyError:
-			raise Exception("Layout '{}' does not exist".format(name))
-		try:
-			lay_dir = lay_data["directory"]
-		except KeyError:
-			raise Exception("Layout directory is not defined")
-		if not os.path.exists(lay_dir):
-			raise Exception("Layout directory does not exist")
-		try:
-			config = lay_data["config"]
-		except KeyError:
-			config = {}
+			msg = "Layout '{}' does not exist".format(name)
+			raise Exception(msg)
 			
-		return layout.Layout(lay_dir, config)
+		try:
+			layout_res = resource.ref(layout_data["resource"])
+		except KeyError:
+			msg = "Layout '{}' resource is not defined".format(name)
+			raise Exception(msg)
+			
+		layout_file = layout_res.open("r")
+		layout_config = json.loads(layout_file.read())
+		layout_file.close()
 		
-	def __images_load(self, source_dir, config=None):
+		layout_props = {}
+		if "properties" in layout_config:
+			util.merge_dict(layout_props, layout_config["properties"])
+		if "properties" in layout_data:
+			util.merge_dict(layout_props, layout_data["properties"])
+			
+		layout_data = util.resolvable(layout_config["layout"], layout_props)
+		return layout.Layout(layout_res.parent(), layout_data)
+		
+	def __image_load(self, image_res, props=None):
 	
-		images_path = os.path.join(source_dir, "storm-images.json")
-		images = json.loads(open(images_path, "r").read())
+		image_file = images_res.open("r")
+		image_config = json.loads(image_file.read())
+		image_file.close()
 		
-		props = {}
-		if "properties" in images:
-			util.merge_dict(props, images["properties"])
-		if config is not None:
-			util.merge_dict(props, config)
+		image_props = {}
+		if "properties" in image_config:
+			util.merge_dict(image_props, image_config["properties"])
+		if props is not None:
+			util.merge_dict(image_props, props)
 			
-		if "images" in images:
-			for image_data in images["images"]:
-				yield image.Image(util.resolvable(image_data, props))
+		image_data = util.resolvable(image_config["image"], image_props)
+		return image.Image(image_res.parent(), image_data)
 		
 	@property
 	def printer_level(self):
@@ -153,17 +154,17 @@ class Engine:
 	
 		return self.__layouts
 		
-	def register(self, name, prov, config):
+	def register(self, name, prov, props):
 	
 		if name in self.__platforms:
 			raise Exception("Platform '{}' already exists".format(name))
 		
 		plat = self.__platform_inst(name, prov)
-		plat.configure(config)
+		plat.configure(props)
 		
 		self.__platforms[name] = {
 			"provider": prov,
-			"config": plat.save()
+			"properties": plat.save()
 		}
 		
 	def dismiss(self, name, destroy):
@@ -171,27 +172,27 @@ class Engine:
 		plat = self.__platform_load(name)
 		if destroy:
 			plat.destroy()
-			shutil.rmtree(self.__platform_dir(name))
+			self.__platform_res(name).delete()
 		del self.__platforms[name]
 		
-	def offer(self, name, source_dir, config):
+	def offer(self, name, image_res, props):
 	
 		plat = self.__platform_load(name)
-		for image in self.__images_load(source_dir, config):
-			plat.build(image)
-			plat.publish(image)
+		image = self.__image_load(image_res, props)
+		plat.build(image)
+		plat.publish(image)
 		
-	def retire(self, name, source_dir):
+	def retire(self, name, image_res):
 	
 		plat = self.__platform_load(name)
-		for image in self.__images_load(source_dir):
-			plat.delete(image)
+		image = self.__image_load(image_res)
+		plat.delete(image)
 		
-	def bind(self, layout_name, bound_dir, config):
+	def bind(self, layout_name, layout_res, props):
 	
 		self.__layouts[layout_name] = {
-			"directory": bound_dir,
-			"config": config
+			"resource": layout_res.unref(),
+			"properties": props
 		}
 		
 	def leave(self, name, destroy):
@@ -212,7 +213,7 @@ class Engine:
 		for lay_name, lay_data in self.__layouts.items():
 			config["layouts"][lay_name] = lay_data
 			
-		config_file = self.__config_file_open("w")
+		config_file = self.__config_res.open("w")
 		config_file.write(json.dumps(config, sort_keys=True, indent=4))
 		config_file.write("\n")
 		config_file.close()

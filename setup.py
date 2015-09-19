@@ -38,7 +38,9 @@ setup(
 	
 	packages=find_packages("packages"),
 	namespace_packages=[
-		"storm"
+		"storm",
+		"storm.provider",
+		"storm.provider.resource"
 	],
 	package_dir={
 		"": "packages"

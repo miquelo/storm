@@ -15,23 +15,4 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from storm.engine import container
-
-from storm.module import util
-
-import json
-import os.path
-
-class Layout:
-
-	def __init__(self, res_parent, layout_data):
-		
-		self.__containers = []
-		if "containers" in layout_data:
-			for cont_data in layout_data["containers"]:
-				self.__containers.append(container.Container(cont_data))
-				
-	def destroy(self):
-	
-		pass
-
+__import__('pkg_resources').declare_namespace(__name__)
