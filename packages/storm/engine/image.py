@@ -70,7 +70,7 @@ class ImageDef:
 		self.__resources = []
 		if "resources" in def_data:
 			for res_data in def_data["resources"]:
-				self.__resources.append(ImageResource(dir_res, res_data))
+				self.__resources.append(ImageResource(res_parent, res_data))
 		self.__provision = []
 		if "provision" in def_data:
 			for prov_data in def_data["provision"]:
@@ -88,7 +88,7 @@ class ImageDef:
 	@property
 	def provision(self):
 	
-		return self.__probision
+		return self.__provision
 		
 	@property
 	def execution(self):
@@ -97,26 +97,20 @@ class ImageDef:
 		
 class ImageResource:
 
-	def __init__(self, dir_res, res_data):
+	def __init__(self, res_parent, res_data):
 	
-		source = resource.ref(res_data["source"])
-		if source.absolute:
-			self.__source = source
-		else:
-			self.__source = resource.ref(dir_res, source)
-		target = resource.ref(res_data["target"])
-		if target.absolute:
-			raise Exception("Absolute target path: {}".format(target))
-		self.__target = target
-		if "properties" in file_data:
-			self.__properties = file_data["properties"]
+		# Only relative sources? => resource.ref(...) redessign
+		self.__source_res = res_parent.ref(res_data["source"])
+		self.__target = res_data["target"]
+		if "properties" in res_data:
+			self.__properties = res_data["properties"]
 		else:
 			self.__properties = {}
 			
 	@property
-	def source(self):
+	def source_res(self):
 	
-		return self.__source  
+		return self.__source_res  
 		
 	@property
 	def target(self):

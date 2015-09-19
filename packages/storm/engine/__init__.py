@@ -119,7 +119,7 @@ class Engine:
 		
 	def __image_load(self, image_res, props=None):
 	
-		image_file = images_res.open("r")
+		image_file = image_res.open("r")
 		image_config = json.loads(image_file.read())
 		image_file.close()
 		
