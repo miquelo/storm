@@ -36,20 +36,23 @@ setup(
 	author="STORM Team",
 	author_email="miquel.ferran.gonzalez@gmail.com",
 	
-	packages=find_packages("packages"),
+	packages=find_packages("packages", "testsuite"),
 	namespace_packages=[
 		"storm",
 		"storm.provider",
 		"storm.provider.resource"
 	],
 	package_dir={
-		"": "packages"
+		"": "packages",
+		"": "testsuite"
 	},
 	extras_require={
 		"color": [
 			"colorama>=0.3.3"
 		]
 	},
+	test_suite="storm",
+	
 	entry_points={
 		"console_scripts": [
 			"storm=storm.application.command:main"
