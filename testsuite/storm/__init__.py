@@ -15,5 +15,3 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-__import__('pkg_resources').declare_namespace(__name__)
-
