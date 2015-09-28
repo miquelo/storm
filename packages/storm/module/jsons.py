@@ -17,17 +17,55 @@
 
 import io
 
-def read_from(str_in):
+def read(str_in):
 
+	class JSONInput:
+	
+		def __init__(self, str_in):
+		
+			self.__str_in = str_in
+			self.__last = None
+			self.peek = self.__peek_input
+			
+		def __peek_last(self):
+		
+			return self.__last
+			
+		def __peek_input(self):
+		
+			self.__last = self.__str_in.read(1)
+			self.peek = self.__peek_last
+			return self.__last
+			
+		def ignore(self):
+		
+			self.peek = self.__peek_input
+			
+		def read(self):
+		
+			c = self.peek()
+			self.ignore()
+			return c
+			
+		def peek_next(self):
+		
+			c = self.peek()
+			while c.isspace():
+				self.ignore()
+				c = self.peek()
+			return c
+			
+		def read_next(self):
+		
+			c = self.peek_next()
+			self.ignore()
+			return c
+			
 	class JSONObject:
 	
 		def __init__(self, key):
 		
 			self.__key = key
-			
-		def __str__(self):
-		
-			return str(self.value())
 			
 		def key(self):
 		
@@ -49,228 +87,180 @@ def read_from(str_in):
 		
 			return False
 			
-		def started(self):
-		
-			
 	class JSONNumber(JSONObject):
 	
-		def __init__(self, key, first_char, str_in):
+		def __init__(self, key, json_in):
 		
 			super().__init__(key)
-			self.__started = False
-			self.__first_char = first_char
-			self.__str_in = str_in
-			self.__iter = self.__iter_first
-			
-		def __iter__(self):
-		
-			yield from self.__iter()
-			
-		def __iter_first(self):
-		
-			self.__started = True
-			self.__iter = self.__iter_next
-			yield self.__first_char
-			
-		def __iter_next(self):
-		
-			completed_check(self)
-			c = self.__str_in.read(1)
-			if len(c) is None or c.isspace():
-				self.__str_in = None
-				raise StopIteration()
-			# TODO When c in (",", "]", "}")
-			yield c
+			self.__json_in = json_in
 			
 		def isnumber(self):
 		
 			return True
 			
-		def started(self):
-		
-			return self.__started
-			
-		def completed(self):
-		
-			return self.__str_in is not None
-			
 		def value(self):
 		
-			started_check(self)
-			str_io = io.StringIO(self.__first_char)
-			for c in self:
-				str_io.write(c)
-			self.__str_in = None
+			str_io = io.StringIO()
+			end = False
+			c = self.__json_in.peek()
+			while not end:
+				if len(c) == 0 or c.isspace() or c in ( ",", "]", "}" ):
+					end = True
+				else:
+					self.__json_in.ignore()
+					str_io.write(c)
+					c = self.__json_in.peek()
 			str_io.seek(0)
-			value = eval(str_io.read())
-			if type(value) not in (int, long, float, complex):
-				raise Exception("'{}' ia not a number".format(value))
-			return value
+			num_val = eval(str_io.read())
+			if type(num_val) not in ( int, long, float, complex):
+				raise Exception("Value '{}' is not a number".format(num_val))
+			return num_val
 			
 	class JSONString(JSONObject):
 	
-		def __init__(self, key, delim, str_in):
+		def __init__(self, key, json_in):
 		
 			super().__init__(key)
-			self.__started = False
-			self.__delim = delim
-			self.__str_in = str_in
-			self.__iter = self.__iter_first
+			self.__json_in = json_in
 			
 		def __iter__(self):
 		
-			completed_check(self)
-			self.__started = True
-			yield from str_generator(self.__str_in, self.__delim)
-			self.__str_in = None
-			
+			yield from str_value(self.__json_in)
+				
 		def isstr(self):
 		
 			return True
 			
-		def started(self):
-		
-			return self.__started
-			
-		def completed(self):
-		
-			return self.__str_in is not None
-			
 		def value(self):
 		
-			started_check(self)
 			str_io = io.StringIO()
 			for c in self:
 				str_io.write(c)
+			str_io.seek(0)
 			return str_io.read()
 			
 	class JSONList(JSONObject):
 	
-		def __init__(self, key, str_in):
+		def __init__(self, key, json_in):
 		
 			super().__init__(key)
-			self.__started = False
-			self.__str_in = str_in
+			self.__json_in = json_in
 			
 		def __iter__(self):
 		
-			completed_check(self)
-			self.__started = True
-			c = read_next(self.__str_in)
-			while len(c) > 0:
-				yield get_item(None, c, self.__str_in)
-				c = read_item_next(self.__str_in, "]")
-				
+			yield from item_iter(self.__json_in, "]", item_key_read_list)
+					
 		def islist(self):
 		
 			return True
 			
-		def started(self):
+		def value(self):
 		
-			return self.__started
-			
-		def completed(self):
-		
-			return self.__str_in is not None
+			val = []
+			for item in self:
+				val.append(item.value())
+			return val
 			
 	class JSONDictionary(JSONObject):
 	
-		def __init__(self, key, str_in):
+		def __init__(self, key, json_in):
 		
 			super().__init__(key)
-			self.__started = False
-			self.__str_in = str_in
+			self.__json_in = json_in
 			
 		def __iter__(self):
 		
-			completed_check(self)
-			self.__started = True
-			c = read_next(self.__str_in)
-			while len(c) > 0:
-				if c not in ( "'", "\"" ):
-					raise Exception("Invalid key delimiter '{}'".format(c))
-				key = io.StringIO()
-				for c in str_generator(self.__str_in, c):
-					key.write(c)
-				key.seek(0)
-				
-				c = read_next(self.__str_in)
-				if len(c) == 0 or c != ":":
-					raise Exception("Invalid entry separator '{}'".format(c))
-				
-				yield get_item(key.read(), c, self.__str_in)
-				c = read_item_next(self.__str_in, "}")
+			yield from item_iter(self.__json_in, "}", item_key_read_dict)
 				
 		def isdict(self):
 		
 			return True
 			
-		def started(self):
+		def value(self):
 		
-			return self.__started
+			val = {}
+			for item in self:
+				val[item.key()] = item.value()
+			return val
 			
-		def completed(self):
-		
-			return self.__str_in is not None
-			
-	def started_check(json_obj):
+	def str_value(json_in):
 	
-		if json_obj.started():
-			raise Exception("Read operation already started")
-			
-	def completed_check(json_obj):
-	
-		if json_obj.completed():
-			raise Exception("Read operation already completed")
-			
-	def str_generator(str_in, delim):
-	
-		completed = False
-		c = str_in.read(1)
-		while len(c) > 0 and not completed:
+		delim = json_in.read()
+		end = False
+		c = json_in.read()
+		while not end:
+			if len(c) == 0:
+				raise Exception("Unterminated character string")
 			if c == delim:
-				completed = True
-			if c == '\\':
-				escaped = str_in.read(1)
-				if len(escaped) == 0:
-					raise Exception("Incomplete escaped character")
-				yield eval("\\{}".format(c))
+				end = True
+			elif c == '\\':
+				esc_c = json_in.read()
+				if len(esc_c) == 0:
+					raise Exception("Unterminated character string")
+				yield eval("\\{}".format(esc_c))
 			else:
 				yield c
-			c = str_in.read(1)
+			c = json_in.read()
 			
-		if not completed:
-			raise Exception("Incompleted character string")
+	def item_read(key, json_in):
+		
+		c = json_in.peek_next()
+		if len(c) == 0:
+			raise Exception("Unexpected end of stream")
+		if c in ( "'", "\"" ):
+			return JSONString(key, json_in)
+		if c == "[":
+			json_in.ignore()
+			return JSONList(key, json_in)
+		if c == "{":
+			json_in.ignore()
+			return JSONDictionary(key, json_in)
+		if c in ( "+", "-", "." ) or c.isnumber():
+			return JSONNumber(key, json_in)
+		raise Exception("Illegal item initial character '{}'".format(c))
+		
+	def item_iter(json_in, end_char, item_key_read):
+	
+		ready = True
+		end = False
+		while not end:
+			c = json_in.peek_next()
+			if c == ",":
+				if ready:
+					raise Exception("Empty item")
+				else:
+					json_in.ignore()
+					c = json_in.peek_next()
+					ready = True
+			elif c == end_char:
+				json_in.ignore()
+				end = True
+			elif not ready:
+				raise Exception("Missing item separator")
+			else:
+				key = item_key_read(json_in)
+				yield item_read(key, json_in)
+				ready = False
+		
+	def item_key_read_list(json_in):
+	
+		return None
+		
+	def item_key_read_dict(json_in):
+	
+		c = json_in.peek_next()
+		if c not in ( "'", "\"" ):
+			raise Exception("Illegal key delimiter '{}'".format(c))
 			
-	def read_next(str_in):
-	
-		c = str_in.read()
-		while c.isspace():
-			c = str_in.read()
-		return c
+		key_io = io.StringIO()
+		for c in str_value(json_in):
+			key_io.write(c)
+		key_io.seek(0)
+		return key_io.read()
 		
-	def read_item_next(str_in, close_char):
-	
-		c = read_next(self.__str_in)
-		if len(c) == 0 or c == close_char:
-			raise StopIteration()
-		if c != ",":
-			raise Exception("Illegal item separator '{}'".format(c))
-		return read_next(self.__str_in)
-		
-	def get_item(key, first_char, str_in):
-	
-		# TODO When first_char in ("]", "}")
-		if len(first_char) == 0:
-			raise StopIteration()
-		if first_char in ( "'", "\"" ):
-			return JSONString(key, first_char, str_in)
-		if first_char == "[":
-			return JSONList(key, str_in)
-		if first_char == "{":
-			return JSONDictionary(key, str_in)
-		return JSONNumber(key, first_char, str_in)
-		
-	c = str_in.read(1)
-	return get_item(None, c, str_in)
+	json_in = JSONInput(str_in)
+	c = json_in.peek_next()
+	if len(c) == 0:
+		return None
+	return item_read(None, json_in)
 
