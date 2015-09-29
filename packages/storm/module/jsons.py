@@ -271,7 +271,7 @@ def read(str_in):
 def write_number(str_out, value):
 
 	if type(value) in ( int, float, complex ):
-		str_out.write(value)
+		str_out.write(str(value))
 		return None
 	raise Exception("Value '{}' is not a number".format(value))
 	

@@ -22,13 +22,9 @@ import unittest
 
 class TestRead(unittest.TestCase):
 
-	def read_str(self, str_val):
-	
-		return jsons.read(io.StringIO(str_val))
-		
 	def test_empty(self):
 	
-		self.assertIsNone(self.read_str(""))
+		self.assertIsNone(jsons.read(io.StringIO("")))
 		
 	def test_chaos_stream(self):
 	
@@ -105,4 +101,55 @@ class TestRead(unittest.TestCase):
 			else:
 				self.assertTrue(False, "Invalid length")
 			count_a += 1
+			
+class TestWrite(unittest.TestCase):
+
+	def test_chaos_stream(self):
+	
+		str_io = io.StringIO()
+		str_io.write("\"complete stream\"\n")
+		str_io.write("{");
+		str_io.write("\"number\":24")
+		str_io.write(",\"color\":\"blue\"")
+		str_io.write(",\"elements\":")
+		str_io.write("[")
+		str_io.write("\"string\"")
+		str_io.write(",{")
+		str_io.write("\"name\":\"Mordecai\"")
+		str_io.write("}")
+		str_io.write(",1.25")
+		str_io.write(",[")
+		str_io.write("]")
+		str_io.write("]")
+		# str_io.write(",\"empty dict\": {")
+		# str_io.write("}")
+		# str_io.write("}\n")
+		# str_io.write("[")
+		# str_io.write("\"a\"")
+		# str_io.write(",\"b\"")
+		# str_io.write(",\"c\"")
+		# str_io.write("]")
+		str_io.seek(0)
+		
+		str_out = io.StringIO()
+		
+		json_str = jsons.write_str(str_out, "complete stream")
+		str_out.write("\n")
+		
+		json_dict = jsons.write_dict(str_out)
+		json_dict.write_number("number", 24)
+		json_dict.write_str("color", "blue")
+		value = [
+			"string",
+			{
+				"name": "Mordecai"
+			},
+			1.25,
+			[
+			]
+		]
+		json_dict.write_list("elements", value)
+		
+		str_out.seek(0)
+		self.assertEqual(str_out.read(), str_io.read())
 
