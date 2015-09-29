@@ -112,7 +112,7 @@ def read(str_in):
 					c = self.__json_in.peek()
 			str_io.seek(0)
 			num_val = eval(str_io.read())
-			if type(num_val) not in ( int, long, float, complex):
+			if type(num_val) not in ( int, float, complex):
 				raise Exception("Value '{}' is not a number".format(num_val))
 			return num_val
 			
@@ -187,8 +187,8 @@ def read(str_in):
 	
 		delim = json_in.read()
 		end = False
-		c = json_in.read()
 		while not end:
+			c = json_in.read()
 			if len(c) == 0:
 				raise Exception("Unterminated character string")
 			if c == delim:
@@ -200,7 +200,6 @@ def read(str_in):
 				yield eval("\\{}".format(esc_c))
 			else:
 				yield c
-			c = json_in.read()
 			
 	def item_read(key, json_in):
 		
@@ -215,7 +214,7 @@ def read(str_in):
 		if c == "{":
 			json_in.ignore()
 			return JSONDictionary(key, json_in)
-		if c in ( "+", "-", "." ) or c.isnumber():
+		if c in ( "+", "-", "." ) or c.isdigit():
 			return JSONNumber(key, json_in)
 		raise Exception("Illegal item initial character '{}'".format(c))
 		
@@ -256,6 +255,11 @@ def read(str_in):
 		for c in str_value(json_in):
 			key_io.write(c)
 		key_io.seek(0)
+		
+		c = json_in.read_next()
+		if c != ":":
+			raise Execption("Missing key-value separator")
+		
 		return key_io.read()
 		
 	json_in = JSONInput(str_in)
@@ -263,4 +267,8 @@ def read(str_in):
 	if len(c) == 0:
 		return None
 	return item_read(None, json_in)
+	
+def write(str_out):
+
+	pass
 

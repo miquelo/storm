@@ -29,84 +29,80 @@ class TestRead(unittest.TestCase):
 	def test_empty(self):
 	
 		self.assertIsNone(self.read_str(""))
+		
+	def test_chaos_stream(self):
+	
+		str_in = io.StringIO("""
+			"complete stream"
+			{
+				"number": 24,
+				"color": "blue",
+				"elements": [
+					"string",
+					{
+						"name": "Mordecai"
+					},
+					1.25,
+					[
+					]
+				],
+				"empty dict": {
+				}
+			}
+			[
+				"a",
+				"b",
+				"c"
+			]
+		""")
+		
+		json_obj = jsons.read(str_in)
+		self.assertTrue(json_obj.isstr())
+		self.assertEqual(json_obj.value(), "complete stream")
+		
+		json_obj = jsons.read(str_in)
+		self.assertTrue(json_obj.isdict())
+		count_a = 0
+		for item_a in json_obj:
+			if count_a == 0:
+				self.assertTrue(item_a.isnumber())
+				self.assertEqual(item_a.key(), "number")
+				self.assertEqual(item_a.value(), 24)
+			elif count_a == 1:
+				self.assertTrue(item_a.isstr())
+				self.assertEqual(item_a.key(), "color")
+				self.assertEqual(item_a.value(), "blue")
+			elif count_a == 2:
+				self.assertTrue(item_a.islist())
+				self.assertEqual(item_a.key(), "elements")
+				value_a = item_a.value()
+				self.assertEqual(len(value_a), 4)
+				self.assertEqual(value_a[0], "string")
+				self.assertEqual(value_a[1]["name"], "Mordecai")
+				self.assertEqual(value_a[2], 1.25)
+				self.assertEqual(value_a[3], [])
+			elif count_a == 3:
+				self.assertTrue(item_a.isdict())
+				self.assertEqual(item_a.key(), "empty dict")
+				count_b = 0
+				for item_b in item_a:
+					count_b += 1
+				self.assertEqual(count_b, 0)
+			else:
+				self.assertTrue(False, "Invalid length")
+			count_a += 1
 			
-	def test_empty_list(self):
-	
-		json_obj = self.read_str("""
-			[
-			]
-		""")
+		json_obj = jsons.read(str_in)
 		self.assertTrue(json_obj.islist())
 		count_a = 0
 		for item_a in json_obj:
+			if count_a == 0:
+				self.assertEqual(item_a.value(), "a")
+			elif count_a == 1:
+				self.assertEqual(item_a.value(), "b")
+			elif count_a == 2:
+				self.assertEqual(item_a.value(), "c")
+			else:
+				self.assertTrue(False, "Invalid length")
 			count_a += 1
-		self.assertEqual(count_a, 0)
-				
-	def test_empty_dict(self):
-	
-		json_obj = self.read_str("""
-			{
-			}
-		""")
-		self.assertTrue(json_obj.isdict())
-		count_a = 0
-		for item_a in json_obj:
-			count_a += 1
-		self.assertEqual(count_a, 0)
-		
-	def test_one_item_list(self):
-	
-		json_obj = self.read_str("""
-			[
-				"value"
-			]
-		""")
-		self.assertTrue(json_obj.islist())
-		count_a = 0
-		for item_a in json_obj:
-			count_a += 1
-			self.assertTrue(item_a.isstr())
-			self.assertIsNone(item_a.key())
-			self.assertEqual(item_a.value(), "value")
-		self.assertEqual(count_a, 1)
-		
-	def test_one_item_dict(self):
-	
-		json_obj = self.read_str("""
-			{
-				"key": "value"
-			}
-		""")
-		self.assertTrue(json_obj.isdict())
-		count_a = 0
-		for item_a in json_obj:
-			count_a += 1
-			self.assertTrue(item_a.isstr())
-			self.assertEqual(item_a.key(), "key")
-			self.assertEqual(item_a.value(), "value")
-		self.assertEqual(count_a, 1)
-		
-	def test_list_value(self):
-	
-		json_obj = self.read_str("""
-			[
-				"value"
-			]
-		""")
-		self.assertTrue(json_obj.islist())
-		val = json_obj.value()
-		self.assertEqual(type(val), list)
-		self.assertEqual(val[0], "value")
-		
-	def test_dict_value(self):
-	
-		json_obj = self.read_str("""
-			{
-				"key": "value"
-			}
-		""")
-		self.assertTrue(json_obj.isdict())
-		val = json_obj.value()
-		self.assertEqual(type(val), dict)
-		self.assertEqual(val["key"], "value")
 
