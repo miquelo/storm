@@ -112,7 +112,7 @@ def read(str_in):
 					c = self.__json_in.peek()
 			str_io.seek(0)
 			num_val = eval(str_io.read())
-			if type(num_val) not in ( int, float, complex):
+			if type(num_val) not in ( int, float, complex ):
 				raise Exception("Value '{}' is not a number".format(num_val))
 			return num_val
 			
@@ -268,7 +268,169 @@ def read(str_in):
 		return None
 	return item_read(None, json_in)
 	
-def write(str_out):
+def write_number(str_out, value):
 
-	pass
+	if type(value) in ( int, float, complex ):
+		str_out.write(value)
+		return None
+	raise Exception("Value '{}' is not a number".format(value))
+	
+def write_str(str_out, value=None):
+
+	class JSONString:
+	
+		def __init__(self, str_out):
+		
+			self.__str_out = str_out
+			self.__str_out.write("\"")
+			
+		def write(self, c):
+		
+			escape = c == "\""
+			if escape:
+				res_c = "\\{}".format(c)
+			else:
+				res_c = c
+			self.__str_out.write(res_c)
+			
+		def close(self):
+		
+			self.__str_out.write("\"")
+			
+	if value is None:
+		return JSONString(str_out)
+	if isinstance(value, str):
+		json_str = JSONString(str_out)
+		for c in value:
+			json_str.write(c)
+		json_str.close()
+		return None
+	raise Exception("Value '{}' is not an string".format(value))
+	
+def write_list(str_out, value=None):
+
+	class JSONList:
+	
+		def __init__(self, str_out):
+		
+			self.__str_out = str_out
+			self.__write_ready = self.__write_ready_first
+			self.__str_out.write("[")
+			
+		def __write_ready_first(self):
+		
+			self.__write_ready = self.__write_ready_next
+			
+		def __write_ready_next(self):
+		
+			self.__str_out.write(",")
+			
+		def write_number(self, value):
+		
+			self.__write_ready()
+			return write_number(self.__str_out, value)
+			
+		def write_str(self, value):
+		
+			self.__write_ready()
+			return write_str(self.__str_out, value)
+			
+		def write_list(self, value):
+		
+			self.__write_ready()
+			return write_list(self.__str_out, value)
+			
+		def write_dict(self, value):
+		
+			self.__write_ready()
+			return write_dict(self.__str_out, value)
+			
+		def close(self):
+		
+			self.__str_out.write("]")
+			
+	if value is None:
+		return JSONList(str_out)
+	if isinstance(value, list):
+		json_list = JSONList(str_out)
+		for item in value:
+			if isinstance(item, ( int, float, complex )):
+				json_list.write_number(item)
+			elif isinstance(item, str):
+				json_list.write_str(item)
+			elif isinstance(item, list):
+				json_list.write_list(item)
+			elif isinstance(item, dict):
+				json_list.write_dict(item)
+			else:
+				item_type = type(value)
+				raise Exception("Unsupported JSON type '{}'".format(item_type))
+		return None
+	raise Exception("Value '{}' is not a list".format(value))
+	
+def write_dict(str_out, value=None):
+
+	class JSONDictionary:
+	
+		def __init__(self, str_out):
+		
+			self.__str_out = str_out
+			self.__write_ready = self.__write_ready_first
+			self.__str_out.write("{")
+			
+		def __write_key(self, key):
+		
+			self.__write_ready()
+			self.__str_out.write("\"{}\":".format(key))
+			
+		def __write_ready_first(self):
+		
+			self.__write_ready = self.__write_ready_next
+			
+		def __write_ready_next(self):
+		
+			self.__str_out.write(",")
+			
+		def write_number(self, key, value):
+		
+			self.__write_key(key)
+			return write_number(self.__str_out, value)
+			
+		def write_str(self, key, value):
+		
+			self.__write_key(key)
+			return write_str(self.__str_out, value)
+			
+		def write_list(self, key, value):
+		
+			self.__write_key(key)
+			return write_list(self.__str_out, value)
+			
+		def write_dict(self, key, value):
+		
+			self.__write_key(key)
+			return write_dict(self.__str_out, value)
+			
+		def close(self):
+		
+			self.__str_out.write("}")
+			
+	if value is None:
+		return JSONDictionary(str_out)
+	if isinstance(value, list):
+		json_dict = JSONDictionary(str_out)
+		for key, val in value.items():
+			if isinstance(item, ( int, float, complex )):
+				json_dict.write_number(key, val)
+			elif isinstance(item, str):
+				json_dict.write_str(key, val)
+			elif isinstance(item, list):
+				json_dict.write_list(key, val)
+			elif isinstance(item, dict):
+				json_dict.write_dict(key, val)
+			else:
+				val_type = type(val)
+				raise Exception("Unsupported JSON type '{}'".format(val_type))
+		return None
+	raise Exception("Value '{}' is not a list".format(value))
 
