@@ -365,6 +365,7 @@ def write_list(str_out, value=None):
 			else:
 				item_type = type(value)
 				raise Exception("Unsupported JSON type '{}'".format(item_type))
+		json_list.close()
 		return None
 	raise Exception("Value '{}' is not a list".format(value))
 	
@@ -431,6 +432,7 @@ def write_dict(str_out, value=None):
 			else:
 				val_type = type(val)
 				raise Exception("Unsupported JSON type '{}'".format(val_type))
+		json_dict.close()
 		return None
 	raise Exception("Value '{}' is not a list".format(value))
 
