@@ -330,17 +330,17 @@ def write_list(str_out, value=None):
 			self.__write_ready()
 			return write_number(self.__str_out, value)
 			
-		def write_str(self, value):
+		def write_str(self, value=None):
 		
 			self.__write_ready()
 			return write_str(self.__str_out, value)
 			
-		def write_list(self, value):
+		def write_list(self, value=None):
 		
 			self.__write_ready()
 			return write_list(self.__str_out, value)
 			
-		def write_dict(self, value):
+		def write_dict(self, value=None):
 		
 			self.__write_ready()
 			return write_dict(self.__str_out, value)
@@ -397,17 +397,17 @@ def write_dict(str_out, value=None):
 			self.__write_key(key)
 			return write_number(self.__str_out, value)
 			
-		def write_str(self, key, value):
+		def write_str(self, key, value=None):
 		
 			self.__write_key(key)
 			return write_str(self.__str_out, value)
 			
-		def write_list(self, key, value):
+		def write_list(self, key, value=None):
 		
 			self.__write_key(key)
 			return write_list(self.__str_out, value)
 			
-		def write_dict(self, key, value):
+		def write_dict(self, key, value=None):
 		
 			self.__write_key(key)
 			return write_dict(self.__str_out, value)
@@ -418,21 +418,21 @@ def write_dict(str_out, value=None):
 			
 	if value is None:
 		return JSONDictionary(str_out)
-	if isinstance(value, list):
+	if isinstance(value, dict):
 		json_dict = JSONDictionary(str_out)
 		for key, val in value.items():
-			if isinstance(item, ( int, float, complex )):
+			if isinstance(val, ( int, float, complex )):
 				json_dict.write_number(key, val)
-			elif isinstance(item, str):
+			elif isinstance(val, str):
 				json_dict.write_str(key, val)
-			elif isinstance(item, list):
+			elif isinstance(val, list):
 				json_dict.write_list(key, val)
-			elif isinstance(item, dict):
+			elif isinstance(val, dict):
 				json_dict.write_dict(key, val)
 			else:
 				val_type = type(val)
 				raise Exception("Unsupported JSON type '{}'".format(val_type))
 		json_dict.close()
 		return None
-	raise Exception("Value '{}' is not a list".format(value))
+	raise Exception("Value '{}' is not a dictionary".format(value))
 

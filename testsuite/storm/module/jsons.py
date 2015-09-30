@@ -121,14 +121,14 @@ class TestWrite(unittest.TestCase):
 		str_io.write(",[")
 		str_io.write("]")
 		str_io.write("]")
-		# str_io.write(",\"empty dict\": {")
-		# str_io.write("}")
-		# str_io.write("}\n")
-		# str_io.write("[")
-		# str_io.write("\"a\"")
-		# str_io.write(",\"b\"")
-		# str_io.write(",\"c\"")
-		# str_io.write("]")
+		str_io.write(",\"empty dict\":{")
+		str_io.write("}")
+		str_io.write("}")
+		str_io.write("[")
+		str_io.write("\"a\"")
+		str_io.write(",\"b\"")
+		str_io.write(",\"c\"")
+		str_io.write("]")
 		str_io.seek(0)
 		
 		str_out = io.StringIO()
@@ -149,6 +149,14 @@ class TestWrite(unittest.TestCase):
 			]
 		]
 		json_dict.write_list("elements", value)
+		json_dict.write_dict("empty dict").close()
+		json_dict.close()
+		
+		json_list = jsons.write_list(str_out)
+		json_list.write_str("a")
+		json_list.write_str("b")
+		json_list.write_str("c")
+		json_list.close()
 		
 		str_out.seek(0)
 		self.assertEqual(str_out.read(), str_io.read())
