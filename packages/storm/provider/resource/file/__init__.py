@@ -20,23 +20,6 @@ from storm.module import resource
 import os
 import os.path
 import shutil
-
-class Directory:
-
-	def __init__(self, path, flags):
-	
-		self.__path = path
-		self.__flags = flags
-		
-	def change(self):
-	
-		old = Directory(os.getcwd(), self.__flags)
-		os.chdir(self.__path)
-		return old
-		
-	def close(self):
-	
-		pass
 		
 class ResourceHandler:
 
@@ -49,56 +32,37 @@ class ResourceHandler:
 		self.__uri = uri
 		self.__props = props
 		
-	def __open_file(self, path, flags):
+	def exists(self):
 	
-		try:
-			return open(path, flags)
-		except FileNotFoundError as err:
-			raise resource.ResourceNotFoundError(err)
-		
-	def __open_dir(self, path, flags):
-	
-		return Directory(path, flags)
+		return os.path.exists(self.__uri.path)
 		
 	def name(self):
 	
 		return os.path.basename(self.__uri.path)
-		
-	def exists(self):
-	
-		return os.path.exists(self.__uri.path)
 		
 	def delete(self):
 	
 		if self.exists():
 			shutil.rmtree(self.__uri.path)
 			return True
-			
 		return False
 		
 	def open(self, flags):
 	
-		path = self.__uri.path
-		
-		if self.exists():
-			if os.path.isdir(path):
-				open_fn = self.__open_dir
-			elif os.path.isfile(path):
-				open_fn = self.__open_file
+		try:
+			path = self.__uri.path
+			if self.exists():
+				if not os.path.isfile(path):
+					raise TypeError("Not a file: '{}'".format(path))
 			else:
-				raise TypeError("Unsupported file type")
-		else:
-			if path.endswith("/"):
-				path_dir = path
-				open_fn = self.__open_dir
-			else:
+				if path.endswith("/"):
+					raise TypeError("Invalid file path: '{}'".format(path))
 				path_dir = dirname(path)
-				open_fn = self.__open_file
-				
-			if not os.path.exists(path_dir):
-				os.makedirs(path_dir)
-				
-		return open_fn(path, flags)
+				if not os.path.exists(path_dir):
+					os.makedirs(path_dir)	
+			return open(path, flags)
+		except FileNotFoundError as err:
+			raise resource.ResourceNotFoundError(err)
 		
 def abspath(path):
 

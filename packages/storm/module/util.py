@@ -16,6 +16,8 @@
 #
 
 import io
+import os
+import os.path
 import subprocess
 
 def merge_dict(source, other):
@@ -32,13 +34,13 @@ def merge_dict(source, other):
 		except KeyError:
 			source[key] = value
 			
-def call(call_res, args, err_msg):
+def call(call_dir, args, err_msg):
 	
 	try:
-		call_dir = None
-		if call_res is not None:
-			call_dir = call_res.open("r")
-			old_dir = call_dir.change()
+		old_dir = None
+		if call_dir is not None:
+			old_dir = os.getcwd()
+			os.chdir(call_dir)
 			
 		proc = subprocess.Popen(args)
 		if proc.wait() != 0:
@@ -61,9 +63,8 @@ def call(call_res, args, err_msg):
 		finally:
 			raise Exception("{} execution aborted".format(cmd))
 	finally:
-		if call_dir is not None:
-			old_dir.change()
-			call_dir.close()
+		if old_dir is not None:
+			os.chdir(old_dir)
 			
 def resolve(r_in, r_out, r_vars):
 

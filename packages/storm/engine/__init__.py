@@ -95,7 +95,7 @@ class Engine:
 		try:
 			layout_data = self.__layouts[name]
 		except KeyError:
-			msg = "Layout '{}' does not exist".format(name)
+			msg = "Layout '{}' is not bound".format(name)
 			raise Exception(msg)
 			
 		try:
@@ -190,6 +190,9 @@ class Engine:
 		
 	def bind(self, layout_name, layout_res, props):
 	
+		if layout_name in self.__layouts:
+			msg = "Layout '{}' already bound".format(layout_name)
+			raise Exception(msg)
 		self.__layouts[layout_name] = {
 			"resource": layout_res.unref(),
 			"properties": props

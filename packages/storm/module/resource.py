@@ -57,50 +57,58 @@ def ref(uri_str, props=None):
 				self.__uri.scheme,
 				self.__uri.location or "",
 				path,
-				query or "",
-				fragment or ""
+				query or self.__uri.query or "",
+				fragment or self.__uri.fragment or ""
 			)
+			
+		@property
+		def scheme(self):
+		
+			return self.__uri.scheme
+			
+		@property
+		def location(self):
+		
+			return self.__uri.location
+			
+		@property
+		def path(self):
+		
+			return self.__uri.path
+			
+		@property
+		def query(self):
+		
+			return self.__uri.query
+			
+		@property
+		def fragment(self):
+		
+			return self.__uri.fragment
 			
 		def unref(self):
 		
 			return str(self.__uri)
 			
-		def ref(self, uri_str):
+		def ref(self, path, query=None, fragment=None):
 		
-			uri = URI(url_parts_get(uri_str))
-			if self.__uri.scheme != uri.scheme:
-				msg = "Different schemes cannot be mixed"
-				raise TypeError(msg)
-			if self.__uri.location is not None:
-				msg = "Referenced resource cannot have an explicit location"
-				raise TypeError(msg)
-			if self.__mod.isabs(uri.path):
-				msg = "Referenced resource cannot have an absolute path"
-				raise TypeError(msg)
-			
-			url_parts = self.__url_parts(
-				self.__mod.join(self.__uri.path, uri.path),
-				uri.query,
-				uri.fragment
-			)
-			return resource_ref(url_parts, self.__props)
-				
-		def parent(self):
-		
-			url_parts = self.__url_parts(
-				self.__mod.dirname(self.__uri.path),
-				self.__uri.query,
-				self.__uri.fragment
-			)
+			new_path = self.__mod.join(self.path, path)
+			url_parts = self.__url_parts(new_path, query, fragment)
 			return resource_ref(url_parts, self.__props)
 			
-		def name(self):
+		def parent(self, query=None, fragment=None):
 		
-			return self.__handler.name()
+			new_path = self.__mod.dirname(self.path)
+			url_parts = self.__url_parts(new_path, query, fragment)
+			return resource_ref(url_parts, self.__props)
 			
 		def exists(self):
 		
 			return self.__handler.exists()
+			
+		def name(self):
+		
+			return self.__handler.name()
 			
 		def delete(self):
 		
@@ -183,9 +191,5 @@ def ref(uri_str, props=None):
 		mod_name = "storm.provider.resource.{}".format(uri.scheme)
 		return Resource(importlib.import_module(mod_name), uri, props)
 		
-	def url_parts_get(uri_str):
-		
-		return urllib.parse.urlsplit(uri_str, default_scheme)
-		
-	return resource_ref(url_parts_get(uri_str), props)
+	return resource_ref(urllib.parse.urlsplit(uri_str, default_scheme), props)
 
