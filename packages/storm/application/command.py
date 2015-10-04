@@ -71,10 +71,10 @@ def main():
 	except BaseException:
 		appdata_res = resource.ref(os.environ["HOME"])
 		data_res_name = ".{}".format(application_name)
-	data_res = appdata_res.ref("{}/".format(data_res_name))
+	data_res = appdata_res.ref(data_res_name)
 		
 	# Execute command
-	eng = engine.Engine(data_res.ref("config.json"))
+	eng = engine.Engine(data_res.ref("engine.json"))
 	
 	try:
 	
