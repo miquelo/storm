@@ -376,12 +376,12 @@ def command_execute_leave(eng, arguments):
 		raise CommandError(err)
 		
 #
-# Command STATE
+# Command WATCH
 #
-def command_execute_state(eng, arguments):
+def command_execute_watch(eng, arguments):
 
 	# Parse arguments
-	parser = command_parser_layout("state")
+	parser = command_parser_layout("watch")
 	parser.parse_args(arguments)
 	
 #
