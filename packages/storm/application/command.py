@@ -21,7 +21,6 @@ from storm.module import properties
 from storm.module import resource
 from storm.module import util
 
-import json
 import argparse
 import os
 import sys

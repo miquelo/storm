@@ -19,12 +19,11 @@ from storm.engine import image
 from storm.engine import layout
 from storm.engine import printer
 
+from storm.module import jsons
 from storm.module import resource
 from storm.module import util
 
 import importlib
-import json
-import shutil
 
 #
 # Engine
@@ -40,7 +39,11 @@ class Engine:
 		
 		try:
 			config_file = self.__config_res.open("r")
-			config = json.loads(config_file.read())
+			config_in = jsons.read(config_file)
+			if config_in is None:
+				config = {}
+			else:
+				config = config_in.value()
 			
 			if "platforms" in config:
 				for plat_name, plat_data in config["platforms"].items():
@@ -48,15 +51,12 @@ class Engine:
 						"provider": plat_data["provider"],
 						"properties": plat_data["properties"]
 					}
-					
 			if "layouts" in config:
 				for lay_name, lay_data in config["layouts"].items():
 					self.__layouts[lay_name] = {
 						"resource": lay_data["resource"],
 						"properties": lay_data["properties"]
 					}
-			
-			config_file.close()
 		except resource.ResourceNotFoundError:
 			pass
 		
@@ -217,7 +217,7 @@ class Engine:
 			config["layouts"][lay_name] = lay_data
 			
 		config_file = self.__config_res.open("w")
-		config_file.write(json.dumps(config, sort_keys=True, indent=4))
+		jsons.write_dict(config_file, config)
 		config_file.write("\n")
 		config_file.close()
 
