@@ -217,7 +217,7 @@ class Engine:
 			config["layouts"][lay_name] = lay_data
 			
 		config_file = self.__config_res.open("w")
-		jsons.write_dict(config_file, config)
+		jsons.write_dict(config_file, config, True)
 		config_file.write("\n")
 		config_file.close()
 

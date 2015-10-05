@@ -307,23 +307,52 @@ def write_str(str_out, value=None):
 		return None
 	raise Exception("Value '{}' is not an string".format(value))
 	
-def write_list(str_out, value=None):
+def write_list(str_out, value=None, pretty=False, level=0):
 
 	class JSONList:
 	
-		def __init__(self, str_out):
+		def __init__(self, str_out, pretty, level):
 		
 			self.__str_out = str_out
-			self.__write_ready = self.__write_ready_first
+			self.__pretty = pretty
+			if self.__pretty:
+				self.__write_ready = self.__write_ready_pretty_first
+				self.__close = self.__close_pretty
+			else:
+				self.__write_ready = self.__write_ready_compact_first
+				self.__close = self.__close_compact
+			self.__level = level
+			
 			self.__str_out.write("[")
 			
-		def __write_ready_first(self):
+		def __write_ready_pretty_first(self):
 		
-			self.__write_ready = self.__write_ready_next
+			self.__write_ready = self.__write_ready_pretty_next
+			self.__str_out.write("\n")
+			self.__str_out.write("\t" * (self.__level + 1))
 			
-		def __write_ready_next(self):
+		def __write_ready_pretty_next(self):
+		
+			self.__str_out.write(",\n")
+			self.__str_out.write("\t" * (self.__level + 1))
+			
+		def __write_ready_compact_first(self):
+		
+			self.__write_ready = self.__write_ready_compact_next
+			
+		def __write_ready_compact_next(self):
 		
 			self.__str_out.write(",")
+			
+		def __close_pretty(self):
+		
+			self.__str_out.write("\n")
+			self.__str_out.write("\t" * self.__level)
+			self.__str_out.write("]")
+			
+		def __close_compact(self):
+		
+			self.__str_out.write("]")
 			
 		def write_number(self, value):
 		
@@ -338,21 +367,31 @@ def write_list(str_out, value=None):
 		def write_list(self, value=None):
 		
 			self.__write_ready()
-			return write_list(self.__str_out, value)
+			return write_list(
+				self.__str_out,
+				value,
+				self.__pretty,
+				self.__level + 1
+			)
 			
 		def write_dict(self, value=None):
 		
 			self.__write_ready()
-			return write_dict(self.__str_out, value)
+			return write_dict(
+				self.__str_out,
+				value,
+				self.__pretty,
+				self.__level + 1
+			)
 			
 		def close(self):
 		
-			self.__str_out.write("]")
+			self.__close()
 			
 	if value is None:
-		return JSONList(str_out)
+		return JSONList(str_out, pretty, level)
 	if isinstance(value, list):
-		json_list = JSONList(str_out)
+		json_list = JSONList(str_out, pretty, level)
 		for item in value:
 			if isinstance(item, ( int, float, complex )):
 				json_list.write_number(item)
@@ -369,28 +408,64 @@ def write_list(str_out, value=None):
 		return None
 	raise Exception("Value '{}' is not a list".format(value))
 	
-def write_dict(str_out, value=None):
+def write_dict(str_out, value=None, pretty=False, level=0):
 
 	class JSONDictionary:
 	
-		def __init__(self, str_out):
+		def __init__(self, str_out, pretty, level):
 		
 			self.__str_out = str_out
-			self.__write_ready = self.__write_ready_first
+			self.__pretty = pretty
+			if self.__pretty:
+				self.__write_key = self.__write_key_pretty
+				self.__write_ready = self.__write_ready_pretty_first
+				self.__close = self.__close_pretty
+			else:
+				self.__write_key = self.__write_key_compact
+				self.__write_ready = self.__write_ready_compact_first
+				self.__close = self.__close_compact
+			self.__level = level
+			
 			self.__str_out.write("{")
 			
-		def __write_key(self, key):
+		def __write_key_pretty(self, key):
+		
+			self.__write_ready()
+			self.__str_out.write("\"{}\": ".format(key))
+			
+		def __write_key_compact(self, key):
 		
 			self.__write_ready()
 			self.__str_out.write("\"{}\":".format(key))
 			
-		def __write_ready_first(self):
+		def __write_ready_pretty_first(self):
 		
-			self.__write_ready = self.__write_ready_next
+			self.__write_ready = self.__write_ready_pretty_next
+			self.__str_out.write("\n")
+			self.__str_out.write("\t" * (self.__level + 1))
 			
-		def __write_ready_next(self):
+		def __write_ready_pretty_next(self):
+		
+			self.__str_out.write(",\n")
+			self.__str_out.write("\t" * (self.__level + 1))
+			
+		def __write_ready_compact_first(self):
+		
+			self.__write_ready = self.__write_ready_compact_next
+			
+		def __write_ready_compact_next(self):
 		
 			self.__str_out.write(",")
+			
+		def __close_pretty(self):
+		
+			self.__str_out.write("\n")
+			self.__str_out.write("\t" * self.__level)
+			self.__str_out.write("}")
+			
+		def __close_compact(self):
+		
+			self.__str_out.write("}")
 			
 		def write_number(self, key, value):
 		
@@ -405,21 +480,31 @@ def write_dict(str_out, value=None):
 		def write_list(self, key, value=None):
 		
 			self.__write_key(key)
-			return write_list(self.__str_out, value)
+			return write_list(
+				self.__str_out,
+				value,
+				self.__pretty,
+				self.__level + 1
+			)
 			
 		def write_dict(self, key, value=None):
 		
 			self.__write_key(key)
-			return write_dict(self.__str_out, value)
+			return write_dict(
+				self.__str_out,
+				value,
+				self.__pretty,
+				self.__level + 1
+			)
 			
 		def close(self):
 		
-			self.__str_out.write("}")
+			self.__close()
 			
 	if value is None:
-		return JSONDictionary(str_out)
+		return JSONDictionary(str_out, pretty, level)
 	if isinstance(value, dict):
-		json_dict = JSONDictionary(str_out)
+		json_dict = JSONDictionary(str_out, pretty, level)
 		for key, val in value.items():
 			if isinstance(val, ( int, float, complex )):
 				json_dict.write_number(key, val)
