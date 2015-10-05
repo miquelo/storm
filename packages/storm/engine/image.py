@@ -15,18 +15,32 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from storm.module import jsons
+
 import os.path
 
 class Image:
 
-	def __init__(self, res_parent, image_data):
+	def __init__(self, data_res, props):
 	
+		data_file = data_res.open("r")
+		data = jsons.read(data_file).value()
+		data_file.close()
+		
+		image_props = {}
+		if "properties" in data:
+			util.merge_dict(image_props, data["properties"])
+		util.merge_dict(image_props, props)
+		image_data = util.resolvable(data["image"], image_props)
+		
 		self.__ref = ImageRef(image_data)
 		if "extends" in image_data:
 			self.__extends = ImageRef(image_data["extends"])
 		else:
 			self.__extends = None
-		self.__definition = ImageDef(res_parent, image_data["definition"])
+			
+		definition = image_data["definition"]
+		self.__definition = ImageDef(data_res.parent(), definition)
 		
 	@property
 	def ref(self):

@@ -30,107 +30,51 @@ import importlib
 #
 class Engine:
 
-	def __init__(self, config_res):
+	def __platform_provider(plat):
 	
-		self.__config_res = config_res
+		return "{}.{}".format(plat.__module__, plat.__class__.__name__)
+		
+	def __init__(self, state_res):
+	
+		self.__state_res = state_res
 		self.__platforms = {}
 		self.__layouts = {}
 		self.__printer_fact = printer.PrinterFactory()
 		
 		try:
-			config_file = self.__config_res.open("r")
-			config_in = jsons.read(config_file)
-			if config_in is None:
-				config = {}
+			state_file = self.__state_res.open("r")
+			state_in = jsons.read(state_file)
+			if state_in is None:
+				state = {}
 			else:
-				config = config_in.value()
+				state = state_in.value()
+			state_file.close()
 			
-			if "platforms" in config:
-				for plat_name, plat_data in config["platforms"].items():
-					self.__platforms[plat_name] = {
-						"provider": plat_data["provider"],
-						"properties": plat_data["properties"]
-					}
-			if "layouts" in config:
-				for lay_name, lay_data in config["layouts"].items():
-					self.__layouts[lay_name] = {
-						"resource": lay_data["resource"],
-						"properties": lay_data["properties"]
-					}
+			if "platforms" in state:
+				for name, data in state["platforms"].items():
+					self.__platforms[name] = self.__platform_load(
+						name,
+						data["provider"],
+						data["properties"]
+					)
+			if "layouts" in state:
+				for name, data in state["layouts"].items():
+					self.__layouts[name] = layout.Layout(
+						resource.ref(data["resource"]),
+						data["properties"]
+					)
 		except resource.ResourceNotFoundError:
 			pass
-		
-	def __platform_res(self, name):
+			
+	def __platform_load(self, name, prov, props):
 	
-		platforms_res = self.__config_res.parent().ref("platforms")
-		return platforms_res.ref(name)
-		
-	def __platform_inst(self, name, prov):
-	
-		try:
-			p_mod_name = "storm.provider.platform.{}".format(prov)
-			p_mod = importlib.import_module(p_mod_name)
-			return p_mod.Platform(
-				self.__platform_res(name),
-				self.__printer_fact.printer
-			)
-		except BaseException:
-			err_msg = "Could not instantiate platform of with provider '{}'"
-			raise Exception(err_msg.format(prov))
-			
-	def __platform_load(self, name):
-	
-		try:
-			plat_data = self.__platforms[name]
-		except KeyError:
-			raise Exception("Platform '{}' does not exist".format(name))
-			
-		plat = self.__platform_inst(name, plat_data["provider"])
-		plat.load(plat_data["properties"])
-		
-		return plat
-		
-	def __layout_load(self, name):
-	
-		try:
-			layout_data = self.__layouts[name]
-		except KeyError:
-			msg = "Layout '{}' is not bound".format(name)
-			raise Exception(msg)
-			
-		try:
-			layout_res = resource.ref(layout_data["resource"])
-		except KeyError:
-			msg = "Layout '{}' resource is not defined".format(name)
-			raise Exception(msg)
-			
-		layout_file = layout_res.open("r")
-		layout_config = json.loads(layout_file.read())
-		layout_file.close()
-		
-		layout_props = {}
-		if "properties" in layout_config:
-			util.merge_dict(layout_props, layout_config["properties"])
-		if "properties" in layout_data:
-			util.merge_dict(layout_props, layout_data["properties"])
-			
-		layout_data = util.resolvable(layout_config["layout"], layout_props)
-		return layout.Layout(layout_res.parent(), layout_data)
-		
-	def __image_load(self, image_res, props=None):
-	
-		image_file = image_res.open("r")
-		image_config = json.loads(image_file.read())
-		image_file.close()
-		
-		image_props = {}
-		if "properties" in image_config:
-			util.merge_dict(image_props, image_config["properties"])
-		if props is not None:
-			util.merge_dict(image_props, props)
-			
-		image_data = util.resolvable(image_config["image"], image_props)
-		return image.Image(image_res.parent(), image_data)
+		mod_name, sep, class_name = prov.rpartition(".")
+		mod = importlib.import_module(mod_name)
+		return mod[class_name](
+			self.__state_res.parent().ref("platforms").ref(name),
+			props,
+			self.__printer_fact.printer
+		)
 		
 	@property
 	def printer_level(self):
@@ -148,76 +92,72 @@ class Engine:
 		
 	def platforms(self):
 	
-		return self.__platforms
+		return {
+			name: __platform_provider(plat)
+			for name, plat in self.__platforms.items()
+		}
 		
 	def layouts(self):
 	
-		return self.__layouts
-		
-	def register(self, name, prov, props):
-	
-		if name in self.__platforms:
-			raise Exception("Platform '{}' already exists".format(name))
-		
-		plat = self.__platform_inst(name, prov)
-		plat.configure(props)
-		
-		self.__platforms[name] = {
-			"provider": prov,
-			"properties": plat.save()
+		return {
+			name: lay.unref()
+			for name, lay in self.__layouts.items()
 		}
+		
+	def register(self, name, prov, props=None):
+	
+		self.__platforms[name] = self.__platform_load(name, prov, props or {})
 		
 	def dismiss(self, name, destroy):
 	
-		plat = self.__platform_load(name)
 		if destroy:
-			plat.destroy()
-			self.__platform_res(name).delete()
+			self.__platforms[name].destroy()
 		del self.__platforms[name]
 		
-	def offer(self, name, image_res, props):
+	def offer(self, name, image_res, props=None):
 	
-		plat = self.__platform_load(name)
-		image = self.__image_load(image_res, props)
+		plat = self.__platforms[name]
+		image = image.Image(image_res, props or {})
 		plat.build(image)
 		plat.publish(image)
 		
 	def retire(self, name, image_res):
 	
-		plat = self.__platform_load(name)
-		image = self.__image_load(image_res)
+		plat = self.__platforms[name]
+		image = image.Image(image_res, {})
 		plat.delete(image)
 		
-	def bind(self, layout_name, layout_res, props):
+	def bind(self, layout_name, layout_res, props=None):
 	
-		if layout_name in self.__layouts:
-			msg = "Layout '{}' already bound".format(layout_name)
-			raise Exception(msg)
-		self.__layouts[layout_name] = {
-			"resource": layout_res.unref(),
-			"properties": props
-		}
+		self.__layouts[layout_name] = layout.Layout(
+			layout_res,
+			props or {}
+		)
 		
 	def leave(self, name, destroy):
 	
-		lay = self.__layout_load(name)
 		if destroy:
-			lay.destroy()
+			self__layouts[name].destroy()
 		del self.__layouts[name]
 		
 	def store(self):
 	
-		config = {
+		state = {
 			"platforms": {},
 			"layouts": {}
 		}
-		for plat_name, plat_data in self.__platforms.items():
-			config["platforms"][plat_name] = plat_data
-		for lay_name, lay_data in self.__layouts.items():
-			config["layouts"][lay_name] = lay_data
-			
-		config_file = self.__config_res.open("w")
-		jsons.write_dict(config_file, config, True)
-		config_file.write("\n")
-		config_file.close()
+		for name, plat in self.__platforms.items():
+			state["platforms"][name] = {
+				"provider": __platform_provider(plat),
+				"properties": plat.properties()
+			}
+		for name, lay in self.__layouts.items():
+			state["layouts"][name] = {
+				"resource": lay.unref(),
+				"properties": lay.properties()
+			}
+		state_file = self.__state_res.open("w")
+		jsons.write_dict(state_file, state, True)
+		state_file.write("\n")
+		state_file.close()
 

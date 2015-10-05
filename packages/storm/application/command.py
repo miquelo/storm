@@ -195,8 +195,8 @@ def command_execute_layouts(eng, arguments):
 	parser.parse_args(arguments)
 	
 	pr = eng.printer(sys.stdout)
-	for lay_name, lay_data in eng.layouts().items():
-		pr.append("{} at {}".format(lay_name, lay_data["resource"]))
+	for name, uri in eng.layouts().items():
+		pr.append("{} at {}".format(name, uri))
 	pr.print()
 
 #
