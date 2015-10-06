@@ -36,21 +36,11 @@ class Layout:
 		util.merge_dict(layout_props, props)
 		layout_data = util.resolvable(data["layout"], layout_props)
 		
-		self.__data_res = data_res
-		self.__props = props
 		self.__containers = []
 		
 		#	if "containers" in layout_data:
 		#		for cont_data in layout_data["containers"]:
 		#			self.__containers.append(container.Container(cont_data))
-		
-	def unref(self):
-	
-		return self.__data_res.unref()
-		
-	def properties(self):
-	
-		return self.__props
 		
 	def destroy(self):
 	

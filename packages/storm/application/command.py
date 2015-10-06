@@ -17,6 +17,7 @@
 
 from storm import engine
 
+from storm.module import jsons
 from storm.module import properties
 from storm.module import resource
 from storm.module import util
@@ -181,8 +182,8 @@ def command_execute_platforms(eng, arguments):
 	parser.parse_args(arguments)
 	
 	pr = eng.printer(sys.stdout)
-	for plat_name, plat_data in eng.platforms().items():
-		pr.append("{} ({})".format(plat_name, plat_data["provider"]))
+	for name, prov in eng.platforms().items():
+		pr.append("{} ({})".format(name, prov))
 	pr.print()
 		
 #
@@ -450,7 +451,10 @@ def props_collect(args_props_res):
 	props = {}
 	for props_res in args_props_res:
 		props_file = props_res.open("r")
-		util.merge_dict(props, json.loads(props_file.read()))
+		props_in = jsons.read(props_file)
+		if props_in is None or not props_in.isdict():
+			raise Exception("Properties must be a dictionary")
+		util.merge_dict(props, props_in.value())
 		props_file.close()
 	return props
 

@@ -29,16 +29,129 @@ import importlib
 # Engine
 #
 class Engine:
-
-	def __platform_provider(plat):
 	
-		return "{}.{}".format(plat.__module__, plat.__class__.__name__)
+	class PlatformProxies:
+	
+		class PlatformProxy:
 		
+			def __init__(self, prov, props, state_res, printer_fact):
+		
+				self.__inst = None
+				self.__prov = prov
+				self.__props = props or {}
+				self.__state_res = state_res
+				self.__printer_fact = printer_fact
+			
+			def get(self, name):
+		
+				if self.__inst is None:
+					prov = self.__prov
+					mod_name = "{}{}".format("storm.provider.platform.", prov)
+					mod = importlib.import_module(mod_name)
+					self.__inst = getattr(mod, "Platform")(
+						self.__state_res.parent().ref("platforms").ref(name),
+						self.__props,
+						self.__printer_fact.printer
+					)
+				return self.__inst
+			
+			def provider(self):
+		
+				return self.__prov
+			
+			def properties(self):
+		
+				return self.__props
+				
+		def __init__(self):
+		
+			self.__proxies = {}
+			
+		def items(self):
+		
+			return self.__proxies.items()
+			
+		def get(self):
+		
+			try:
+				proxy = self.__proxies[name]
+			except KeyError:
+				raise Exception("Platform '{}' does not exist".format(name))
+			return proxy.get(name)
+			
+		def put(self, name, prov, props, state_res, printer_fact):
+		
+			if name in self.__proxies:
+				raise Exception("Platform '{}' already exists".format(name))
+			self.__proxies[name] = self.PlatformProxy(
+				prov,
+				props,
+				state_res,
+				printer_fact
+			)
+			
+		def remove(self, name):
+		
+			del self.__proxies[name]
+			
+	class LayoutProxies:
+	
+		class LayoutProxy:
+		
+			def __init__(self, res, props):
+			
+				self.__inst = None
+				self.__res = res
+				self.__props = props or {}
+			
+			def get(self):
+			
+				if self.__inst is None:
+					self.__inst = layout.Layout(
+						self.resource(),
+						self.properties()
+					)
+				return self.__inst
+			
+			def resource(self):
+			
+				return self.__res
+			
+			def properties(self):
+			
+				return self.__props
+				
+		def __init__(self):
+		
+			self.__proxies = {}
+			
+		def items(self):
+		
+			return self.__proxies.items()
+			
+		def get(self, name):
+	
+			try:
+				proxy = self.__proxies[name]
+			except KeyError:
+				raise Exception("Layout '{}' does not exist".format(name))
+			return proxy.get()
+		
+		def put(self, name, res, props):
+	
+			if name in self.__proxies:
+				raise Exception("Layout '{}' already exists".format(name))
+			self.__proxies[name] = self.LayoutProxy(res, props)
+		
+		def remove(self, name):
+	
+			del self.__proxies[name]
+			
 	def __init__(self, state_res):
 	
 		self.__state_res = state_res
-		self.__platforms = {}
-		self.__layouts = {}
+		self.__platforms = self.PlatformProxies()
+		self.__layouts = self.LayoutProxies()
 		self.__printer_fact = printer.PrinterFactory()
 		
 		try:
@@ -52,29 +165,22 @@ class Engine:
 			
 			if "platforms" in state:
 				for name, data in state["platforms"].items():
-					self.__platforms[name] = self.__platform_load(
+					prov = data["provider"]
+					props = data["properties"]
+					self.__platforms.put(
 						name,
-						data["provider"],
-						data["properties"]
+						prov,
+						props,
+						self.__state_res,
+						self.__printer_fact
 					)
 			if "layouts" in state:
 				for name, data in state["layouts"].items():
-					self.__layouts[name] = layout.Layout(
-						resource.ref(data["resource"]),
-						data["properties"]
-					)
+					res = resource.ref(data["resource"])
+					props = data["properties"]
+					self.__layouts.put(name, res, props)
 		except resource.ResourceNotFoundError:
 			pass
-			
-	def __platform_load(self, name, prov, props):
-	
-		mod_name, sep, class_name = prov.rpartition(".")
-		mod = importlib.import_module(mod_name)
-		return mod[class_name](
-			self.__state_res.parent().ref("platforms").ref(name),
-			props,
-			self.__printer_fact.printer
-		)
 		
 	@property
 	def printer_level(self):
@@ -93,52 +199,55 @@ class Engine:
 	def platforms(self):
 	
 		return {
-			name: __platform_provider(plat)
-			for name, plat in self.__platforms.items()
+			name: proxy.provider()
+			for name, proxy in self.__platforms.items()
 		}
 		
 	def layouts(self):
 	
 		return {
-			name: lay.unref()
-			for name, lay in self.__layouts.items()
+			name: proxy.resource().unref()
+			for name, proxy in self.__layouts.items()
 		}
 		
 	def register(self, name, prov, props=None):
 	
-		self.__platforms[name] = self.__platform_load(name, prov, props or {})
+		self.__platforms.put(
+			name,
+			prov,
+			props,
+			self.__state_res,
+			self.__printer_fact
+		)
 		
 	def dismiss(self, name, destroy):
 	
 		if destroy:
-			self.__platforms[name].destroy()
-		del self.__platforms[name]
+			self.__platforms.get(name).destroy()
+		self.__platforms.remove(name)
 		
-	def offer(self, name, image_res, props=None):
+	def offer(self, name, res, props=None):
 	
-		plat = self.__platforms[name]
-		image = image.Image(image_res, props or {})
+		plat = self.__platforms.get(name)
+		image = image.Image(res, props or {})
 		plat.build(image)
 		plat.publish(image)
 		
-	def retire(self, name, image_res):
+	def retire(self, name, res):
 	
-		plat = self.__platforms[name]
-		image = image.Image(image_res, {})
+		plat =  self.__platforms.get(name)
+		image = image.Image(res, {})
 		plat.delete(image)
 		
-	def bind(self, layout_name, layout_res, props=None):
+	def bind(self, name, res, props=None):
 	
-		self.__layouts[layout_name] = layout.Layout(
-			layout_res,
-			props or {}
-		)
+		self.__layouts.put(name, res, props)
 		
 	def leave(self, name, destroy):
 	
 		if destroy:
-			self__layouts[name].destroy()
-		del self.__layouts[name]
+			self__layouts.get(name).destroy()
+		self.__layouts.remove(name)
 		
 	def store(self):
 	
@@ -146,15 +255,15 @@ class Engine:
 			"platforms": {},
 			"layouts": {}
 		}
-		for name, plat in self.__platforms.items():
+		for name, proxy in self.__platforms.items():
 			state["platforms"][name] = {
-				"provider": __platform_provider(plat),
-				"properties": plat.properties()
+				"provider": proxy.provider(),
+				"properties": proxy.properties()
 			}
-		for name, lay in self.__layouts.items():
+		for name, proxy in self.__layouts.items():
 			state["layouts"][name] = {
-				"resource": lay.unref(),
-				"properties": lay.properties()
+				"resource": proxy.resource().unref(),
+				"properties": proxy.properties()
 			}
 		state_file = self.__state_res.open("w")
 		jsons.write_dict(state_file, state, True)

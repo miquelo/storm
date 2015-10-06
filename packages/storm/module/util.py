@@ -198,7 +198,7 @@ def resolvable(obj, props):
 				for key, value in super().items()
 			]
 					
-	class ExpressionDictIterator:
+	class ResolvableDictIterator:
 
 		def __init__(self, it):
 		
