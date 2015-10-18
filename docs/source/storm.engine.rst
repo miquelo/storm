@@ -4,24 +4,24 @@ storm.engine package
 Submodules
 ----------
 
-storm.engine.container package
-------------------------------
+storm.engine.container module
+-----------------------------
 
 .. automodule:: storm.engine.container
     :members:
     :undoc-members:
     :show-inheritance:
 
-storm.engine.image package
---------------------------
+storm.engine.image module
+-------------------------
 
 .. automodule:: storm.engine.image
     :members:
     :undoc-members:
     :show-inheritance:
 
-storm.engine.layout package
----------------------------
+storm.engine.layout module
+--------------------------
 
 .. automodule:: storm.engine.layout
     :members:
