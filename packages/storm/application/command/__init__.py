@@ -148,7 +148,7 @@ def main():
 	finally:
 	
 		# Store engine configuration
-		eng.store()
+		eng.store() 
 		
 #
 # Command COMMANDS
@@ -251,7 +251,7 @@ def command_execute_dismiss(eng, arguments):
 	args = parser.parse_args(arguments)
 		
 	try:
-		eng.dismiss(args.platform_name[0], args.destroy)
+		task_result(eng.dismiss(args.platform_name[0], args.destroy))
 	except BaseException as err:
 		raise CommandError(err)
 		
@@ -443,6 +443,21 @@ def command_parser_layout(name):
 	)
 	return parser
 	
+#
+# Task result
+#
+def task_result(task):
+
+	try:
+		return task.result()
+	except KeyboardInterrupt:
+		try:
+			task.cancel()
+			return task.result()
+		except KeyboardInterrupt:
+			task.abort()
+			return task.result()
+			
 #
 # Collect properties from files
 #

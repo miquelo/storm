@@ -25,7 +25,7 @@ import os.path
 class Layout:
 
 	def __init__(self, data_res, props):
-		
+	
 		data_file = data_res.open("r")
 		data = jsons.read(data_file).value()
 		data_file.close()
