@@ -15,24 +15,20 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Engine module.
+"""
+
 from storm.engine import layout
 
 import concurrent.futures
 import importlib
 
-##
-# @package storm.engine
-# Engine package.
-#
-
-##
-# Management engine.
-#
 class Engine:
 
-	##
-	# @private
-	#
+	"""
+	The engine of the management tool.
+	"""
 	class __PlatformStubs:
 	
 		def __init__(self):
@@ -65,9 +61,6 @@ class Engine:
 			del self.__stubs[name]
 			return stub
 			
-	##
-	# @private
-	#
 	class __PlatformStub:
 	
 		def __init__(self, prov, props, data_res):
@@ -91,9 +84,6 @@ class Engine:
 		
 			return self.__inst.configure(context)
 			
-	##
-	# @private
-	#
 	class __LayoutStubs:
 			
 		def __init__(self):
@@ -126,9 +116,6 @@ class Engine:
 			del self.__stubs[name]
 			return stub
 			
-	##
-	# @private
-	#
 	class __LayoutStub:
 	
 		def __init__(self, res, props):
@@ -145,9 +132,6 @@ class Engine:
 		
 			return self.__props
 			
-	##
-	# @private
-	#
 	class __PlatformTaskContext:
 	
 		def __init__(self, worker):
@@ -162,9 +146,6 @@ class Engine:
 		
 			self.__worker.progress(value)
 			
-	##
-	# @private
-	#
 	class __EngineTask:
 	
 		def __init__(self, worker):
@@ -179,9 +160,6 @@ class Engine:
 		
 			return self.__worker.result(timeout)
 			
-	##
-	# @private
-	#
 	class __EngineTaskWorker:
 	
 		def __init__(self, fire_event_fn, platform_tasks):
@@ -229,9 +207,6 @@ class Engine:
 			event = self.__EngineTaskProgressEvent(self.__engine_task, aggval)
 			self.__fire_event_fn(event)
 			
-	##
-	# @private
-	#
 	class __EngineTaskEvent:
 	
 		def __init__(self, task):
@@ -243,28 +218,19 @@ class Engine:
 		
 			return self.__task
 			
-	##
-	# @private
-	#
-	class __EngineTaskStartedEvent(self.__EngineTaskEvent):
+	class __EngineTaskStartedEvent(__EngineTaskEvent):
 	
 		def __init__(self, task):
 		
 			super().__init__(task)
 			
-	##
-	# @private
-	#
-	class __EngineTaskFinishedEvent(self.__EngineTaskEvent):
+	class __EngineTaskFinishedEvent(__EngineTaskEvent):
 	
 		def __init__(self, task):
 		
 			super().__init__(task)
 			
-	##
-	# @private
-	#
-	class EngineTaskMessageEvent(self.__EngineTaskEvent):
+	class __EngineTaskMessageEvent(__EngineTaskEvent):
 	
 		def __init__(self, task, msg):
 		
@@ -276,10 +242,7 @@ class Engine:
 		
 			return self.__msg
 			
-	##
-	# @private
-	#
-	class __EngineTaskProgressEvent(self.__EngineTaskEvent):
+	class __EngineTaskProgressEvent(__EngineTaskEvent):
 
 		def __init__(self, task, value):
 		
@@ -291,18 +254,6 @@ class Engine:
 		
 			return self.__value
 			
-	##
-	# Creates an engine and restores its state from the given state resource.
-	#
-	# @param state_res
-	#		Resource containing engine state.
-	# @param fire_event_fn
-	#		Function called when an engine task event is triggered. Must
-	#		implement @link storm.interface.executor_fire_event_fn @endlink.
-	# @param task_executor
-	#		Executor used to execute engine tasks. Must implement @link
-	#		storm.interface.TaskExecutor @endlink interface.
-	#
 	def __init__(
 		self,
 		state_res,
@@ -347,9 +298,6 @@ class Engine:
 		worker = self.__EngineTaskWorker(self.__fire_event_fn, platform_tasks)
 		return worker.submit(self.__task_executor)
 		
-	##
-	# Returns a dictionary with { platform name: provider name } entries.
-	#
 	def platforms(self):
 	
 		return {
@@ -357,9 +305,6 @@ class Engine:
 			for name, stub in self.__platforms.items()
 		}
 		
-	##
-	# Returns a dictionary with { layout name: layout resource ref } entries.
-	#
 	def layouts(self):
 	
 		return {
@@ -367,28 +312,11 @@ class Engine:
 			for name, stub in self.__layouts.items()
 		}
 		
-	##
-	# Schedules an @link storm.interface.EngineTask @endlink for registering a
-	# new platform.
-	#
-	# @param name
-	#		The name of the platform.
-	# @param prov
-	#		The name of the platform provider.
-	# @param props
-	#		An optional configuration dictionary.
-	#
-	# @return
-	#		The scheduled task.
-	#
 	def register(self, name, prov, props=None):
 	
 		stub = self.__platforms.put(name, prov, props, self.__state_res)
 		return __engine_task(stub.configure())
 		
-	##
-	# Store current engine state to the state resource.
-	#
 	def store(self):
 	
 		state = {
