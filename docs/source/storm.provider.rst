@@ -1,3 +1,0 @@
-storm.provider namespace
-========================
-

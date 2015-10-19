@@ -1,19 +1,11 @@
 storm namespace
 ===============
 
-Submodules
-----------
+Subpackages
+-----------
 
 .. toctree::
 
-    storm.engine
-    storm.module
-    storm.provider
+   storm.engine
+   storm.module
 
-Module contents
----------------
-
-.. automodule:: storm
-    :members:
-    :undoc-members:
-    :show-inheritance:

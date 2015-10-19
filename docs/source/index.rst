@@ -11,7 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   modules.rst
+   interfaces
+   modules
+   providers
 
 Indices and tables
 ==================

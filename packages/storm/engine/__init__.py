@@ -28,7 +28,15 @@ class Engine:
 
 	"""
 	The engine of the management tool.
+	
+	:param Resource state_res:
+	   Resource holding the state of the engine.
+	:param engine_dispatch_event_fn dispatch_event_fn:
+	   Function called in order to dispatch an engine task event.
+	:param TaskExecutor task_executor:
+	   Executor used to run executor tasks.
 	"""
+	
 	class __PlatformStubs:
 	
 		def __init__(self):
@@ -83,54 +91,6 @@ class Engine:
 		def configure(self, context):
 		
 			return self.__inst.configure(context)
-			
-	class __LayoutStubs:
-			
-		def __init__(self):
-		
-			self.__stubs = {}
-			
-		def items(self):
-		
-			return self.__stubs.items()
-			
-		def get(self, name):
-		
-			try:
-				return self.__stubs[name]
-			except KeyError:
-				raise Exception("Layout '{}' does not exist".format(name))
-				
-		def put(self, name, res, props):
-		
-			if name in self.__stubs:
-				raise Exception("Layout '{}' already exists".format(name))
-			
-			stub = self.__LayoutStub(res, props)
-			self.__stub[name] = stub
-			return stub
-			
-		def remove(self, name):
-		
-			stub = self.__stubs[name]
-			del self.__stubs[name]
-			return stub
-			
-	class __LayoutStub:
-	
-		def __init__(self, res, props):
-		
-			self.__res = res
-			self.__props = props
-			self.__inst = layout.Layout(self.__res, self.__props)
-			
-		def resource(self):
-		
-			return self.__res
-			
-		def properties(self):
-		
-			return self.__props
 			
 	class __PlatformTaskContext:
 	
@@ -257,7 +217,7 @@ class Engine:
 	def __init__(
 		self,
 		state_res,
-		fire_event_fn=None,
+		dispatch_event_fn=None,
 		task_executor=concurrent.futures.ThreadPoolExecutor(max_workers=10)
 	):
 	
@@ -269,7 +229,6 @@ class Engine:
 		self.__fire_event_fn = fire_event_fn or fire_event_pass
 		self.__task_executor = task_executor
 		self.__platforms = self.__PlatformStubs()
-		self.__layouts = self.__LayoutStubs()
 		
 		try:
 			state_file = self.__state_res.open("r")
@@ -285,11 +244,6 @@ class Engine:
 					prov = data["provider"]
 					props = data["properties"]
 					self.__platforms.put(name, prov, props, self.__state_res)
-			if "layouts" in state:
-				for name, data in state["layouts"].items():
-					res = resource.ref(data["resource"])
-					props = data["properties"]
-					self.__layouts.put(name, res, props)
 		except resource.ResourceNotFoundError:
 			pass
 			
@@ -300,16 +254,13 @@ class Engine:
 		
 	def platforms(self):
 	
+		"""
+		Returns a dictionary containing name/provider entries.
+		"""
+		
 		return {
 			name: stub.provider()
 			for name, stub in self.__platforms.items()
-		}
-		
-	def layouts(self):
-	
-		return {
-			name: stub.resource().unref()
-			for name, stub in self.__layouts.items()
 		}
 		
 	def register(self, name, prov, props=None):
@@ -320,17 +271,11 @@ class Engine:
 	def store(self):
 	
 		state = {
-			"platforms": {},
-			"layouts": {}
+			"platforms": {}
 		}
 		for name, stub in self.__platforms.items():
 			state["platforms"][name] = {
 				"provider": stub.provider(),
-				"properties": stub.properties()
-			}
-		for name, stub in self.__layouts.items():
-			state["layouts"][name] = {
-				"resource": stub.resource().unref(),
 				"properties": stub.properties()
 			}
 		state_file = self.__state_res.open("w")
