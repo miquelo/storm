@@ -54,7 +54,7 @@ setup(
 	
 	entry_points={
 		"console_scripts": [
-			"storm=storm.application.command:main"
+			"storm=storm.application.shell:main"
 		]
 	},
 	url="http://pypi.python.org/pypi/storm_0.1.0/",

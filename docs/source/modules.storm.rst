@@ -6,6 +6,6 @@ Subpackages
 
 .. toctree::
 
-   storm.engine
-   storm.module
+   modules.storm.engine
+   modules.storm.module
 

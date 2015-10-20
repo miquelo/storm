@@ -9,26 +9,18 @@ Interfaces related with the engine.
 
    .. function:: result(timeout)
    
-.. class:: EngineTaskEvent
+.. class:: EngineEventQueue
 
-   Event fired by an engine task.
+   Queue for engine task events.
    
-   .. attribute:: task
-
-      Event source of type :class:`EngineTask`.
+   .. function:: dispatch(task, name, value)
+   
+      Function used for task event dispatching.
       
-   .. attribute:: name
-   
-      Type name of this event.
-      
-   .. attribute:: value
-   
-      Value of this event.
-   
-.. function:: engine_dispatch_event_fn(event)
-
-   Function used for task event dispatching.
-   
-   :param EngineTaskEvent event:
-      Event to be dispatched.
+      :param EngineTask task:
+         Source task.
+      :param string name:
+         Event type name.
+      :param value:
+         Event value.
 
