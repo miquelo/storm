@@ -20,15 +20,6 @@ from setuptools import setup, find_packages
 import configparser
 import os.path
 
-def message_get(name):
-
-	path = "packages/storm/application"
-	props = configparser.ConfigParser()
-	moduledir = os.path.abspath(__file__)
-	propsdir = os.path.join(os.path.dirname(moduledir), path)
-	props.read(os.path.join(propsdir, "messages.ini"))
-	return props["application"][name]
-
 setup(
 	name="storm",
 	version="0.1.0",
@@ -60,7 +51,7 @@ setup(
 	url="http://pypi.python.org/pypi/storm_0.1.0/",
 	
 	license="LICENSE.txt",
-	description=message_get("description"),
+	description="Management tool for containerized ecosystems.",
 	long_description=open("README.md").read()
 )
 
