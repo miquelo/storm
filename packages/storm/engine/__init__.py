@@ -321,17 +321,17 @@ class Engine:
 		plat_tasks.append(stub.image_unpublish(image))
 		return self.__engine_task(plat_tasks)
 		
-	def satisfy(self, layout):
+	def emerge(self, layout):
 	
 		"""
-		Try to do layout be in the given state accross platforms.
+		Try to do layout to be in the given state accross platforms.
 		
 		:param storm.engine.layout.Layout layout:
 		   The layout to be put into construction.
 		:rtype:
 		   EngineTask
 		:return:
-		   The task running the maintain process.
+		   The task running the emerge process.
 		"""
 		
 		stub = self.__platform_stubs.get(name)

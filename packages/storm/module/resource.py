@@ -15,19 +15,49 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Resource management module.
+"""
+
 import importlib
 import urllib.parse
 
 default_scheme = "file"
 
+"""
+Scheme used when no one is specified on resource creation.
+"""
+
 class ResourceNotFoundError(BaseException):
 
+	"""
+	Exception raised when a resource is existence is needed but not honored.
+	
+	:param args:
+	   Exception arguments. 
+	"""
+	
 	def __init__(self, args):
 	
 		super().__init__(args)
 		
 def ref(uri_str, props=None):
 
+	"""
+	References a resource identifier URI representation.
+	
+	:param string uri_str:
+	   Representation of the resource identifier. Path must be absolute.
+	:param props:
+	   Implementation specific properties.
+	:rtype:
+	   Resource
+	:return:
+	   The referenced resource.
+	:raises TypeError:
+	   If URI path is not absolute.
+	"""
+	
 	class Resource:
 	
 		def __init__(self, mod, uri, props):
