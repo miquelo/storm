@@ -6,4 +6,6 @@ Applications
 
    applications.shell
    applications.gtk
+   applications.windows
+   applications.web
 

@@ -26,6 +26,7 @@ from storm.module import resource
 
 import concurrent.futures
 import importlib
+import threading
 
 class Engine:
 
@@ -45,33 +46,50 @@ class Engine:
 		def __init__(self):
 		
 			self.__stubs = {}
+			self.__access_lock = threading.Lock()
 			
 		def items(self):
 		
-			return self.__stubs.items()
+			try:
+				self.__access_lock.acquire()
+				yield from self.__stubs.items()
+			finally:
+				self.__access_lock.release()
 			
 		def get(self, name):
 		
 			try:
+				self.__access_lock.acquire()
 				return self.__stubs[name]
 			except KeyError:
 				raise Exception("Platform '{}' does not exist".format(name))
+			finally:
+				self.__access_lock.release()
 				
 		def put(self, name, prov, props, state_res):
 		
-			if name in self.__stubs:
-				raise Exception("Platform '{}' already exists".format(name))
-			data_res = state_res.parent().ref("platforms").ref(name)
-			stub = self.__PlatformStub(prov, data_res, props)
-			self.__stubs[name] = stub
-			return stub
+			try:
+				self.__access_lock.acquire()
+				if name in self.__stubs:
+					msg = "Platform '{}' already exists".format(name)
+					raise Exception(msg)
+				data_res = state_res.parent().ref("platforms").ref(name)
+				stub = self.__PlatformStub(prov, data_res, props)
+				self.__stubs[name] = stub
+				return stub
+			finally:
+				self.__access_lock.release()
 			
 		def remove(self, name):
 		
-			stub = self.__stubs[name]
-			del self.__stubs[name]
-			return stub
-			
+			try:
+				self.__access_lock.acquire()
+				stub = self.get(name)
+				del self.__stubs[name]
+				return stub
+			finally:
+				self.__access_lock.release()
+				
 	class __PlatformStub:
 	
 		def __init__(self, prov, data_res, props):
@@ -91,13 +109,29 @@ class Engine:
 		
 			return self.__props
 			
-		def configure(self):
+		def configure(self, context):
 		
-			return self.__platform.configure()
+			return self.__platform.configure(context)
 			
-		def destroy(self):
+		def destroy(self, context):
 		
-			return self.__platform.destroy()
+			return self.__platform.destroy(context)
+			
+		def image_build(self, context, image):
+		
+			return self.__platform.image_build(context, image)
+			
+		def image_publish(self, context, image):
+		
+			return self.__platform.image_publish(context, image)
+			
+		def image_remove(self, context, image):
+		
+			return self.__platform.image_remove(context, image)
+			
+		def image_unpublish(self, context, image):
+		
+			return self.__platform.image_unpublish(context, image)
 			
 	class __PlatformTaskContext:
 	
@@ -109,9 +143,9 @@ class Engine:
 		
 			self.__worker.message(msg)
 			
-		def progress(self, value):
+		def cancel_check(self):
 		
-			self.__worker.progress(value)
+			return self.__worker.cancel_check()
 			
 	class __EngineTask:
 	
@@ -126,36 +160,39 @@ class Engine:
 		def cancel(self):
 		
 			return self.__worker.cancel()
-			
+				
 	class __EngineTaskWorker:
 	
-		def __init__(self, event_queue, platform_tasks):
+		def __init__(self, event_queue, task_fn):
 		
 			self.__event_queue = event_queue
+			self.__task_fn = task_fn
+			self.__cancelled = False
 			self.__context = self.__PlatformTaskContext(self)
 			self.__future = None
 			self.__engine_task = None
-			self.__platform_tasks = platform_tasks
-			self.__completed_count = 0
 			
 		def __dispatch_event(self, name, value=None):
 		
 			self.__event_queue.dispatch(self.__engine_task, name, value)
 			
-		def __tasks_run(self):
+		def __task_run(self, *args, **kwargs):
 		
-			result = []
 			self.__dispatch_event("started")
-			for platform_task in self.__platform_tasks:
-				result.append(platform_task.run(self.__context))
-				self.__completed_count += 1
+			self.progress(0)
+			result = self.__task_fn(self, *args, **kwargs)
+			self.progress(1)
 			self.__dispatch_event("finished")
 			return result
-				
-		def submit(self, executor):
+			
+		def context(self):
+		
+			return self.__context
+			
+		def submit(self, executor, args, kwargs):
 		
 			self.__engine_task = self.__EngineTask(self)
-			self.__future = executor.submit(self.__tasks_run)
+			self.__future = executor.submit(self.__task_run, *args, **kwargs)
 			return self.__engine_task
 			
 		def result(self, timeout):
@@ -166,15 +203,18 @@ class Engine:
 		
 			return self.__future.cancel()
 			
+		def cancel_check(self):
+		
+			if self.__cancelled:
+				raise EngineTaskCancelled()
+				
 		def message(self, msg):
 		
 			self.__dispatch_event("message", msg)
 			
 		def progress(self, value):
 		
-			task_count = len(self.__platform_taks)
-			event_value = (self.__completed_count + value) / task_count
-			self.__dispatch_event("progress", event_value)
+			self.__dispatch_event("progress", value)
 			
 	def __init__(
 		self,
@@ -211,21 +251,63 @@ class Engine:
 		except resource.ResourceNotFoundError:
 			pass
 			
-	def __engine_task(self, plat_tasks):
+	def __engine_task(self, task_fn, *args, **kwargs):
 	
-		worker = self.__EngineTaskWorker(self.__event_queue, plat_tasks)
-		return worker.submit(self.__task_executor)
+		worker = self.__EngineTaskWorker(self.__event_queue, task_fn)
+		return worker.submit(self.__task_executor, args, kwargs)
+		
+	def __platforms(self, worker):
+	
+		return {
+			name: stub.provider()
+			for name, stub in self.__platform_stubs.items()
+		}
+		
+	def __register(self, worker, name, prov, props):
+	
+		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
+		worker.progress(None)
+		stub.configure(worker.context())
+		
+	def __dismiss(self, worker, name, destroy):
+	
+		stub = self.__platform_stubs.remove(name)
+		if destroy:
+			worker.progress(None)
+			stub.destroy(worker.context())
+			
+	def __watch(self, worker, name):
+	
+		return None
+		
+	def __offer(self, worker, name, image):
+	
+		stub = self.__platform_stubs.get(name)
+		stub.image_build(worker.context(), image)
+		stub.image_publish(worker.context(), image)
+		
+	def __retire(self, worker, name, image):
+	
+		stub = self.__platform_stubs.get(name)
+		stub.image_remove(worker.context(), image)
+		stub.image_unpublish(worker.context(), image)
+		
+	def __emerge(self, worker, layout):
+	
+		pass
 		
 	def platforms(self):
 	
 		"""
 		Returns a dictionary containing name/provider entries.
+		
+		:rtype:
+		   EngineTask
+		:return:
+		   The task running the platforms process.
 		"""
 		
-		return {
-			name: stub.provider()
-			for name, stub in self.__platform_stubs.items()
-		}
+		return self.__engine_task(self.__platforms)
 		
 	def register(self, name, prov, props=None):
 	
@@ -247,10 +329,7 @@ class Engine:
 		   If a platform with the given name already exists.
 		"""
 		
-		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
-		plat_tasks = []
-		plat_tasks.append(stub.configure())
-		return self.__engine_task(plat_tasks)
+		return self.__engine_task(self.__register, name, prov, props)
 		
 	def dismiss(self, name, destroy=False):
 	
@@ -269,11 +348,24 @@ class Engine:
 		   If the platform with the given name does not exist.
 		"""
 		
-		stub = self.__platform_stubs.get(name)
-		plat_tasks = []
-		if destroy:
-			plat_tasks.append(stub.destroy())
-		return self.__engine_task(plat_tasks)
+		return self.__engine_task(self.__dismiss, name, destroy)
+		
+	def watch(self, name):
+	
+		"""
+		Requests the state of some platform.
+		
+		:param string name:
+		   The name of the platform that will give its state.
+		:rtype:
+		   EngineTask
+		:return:
+		   The task running the watch process.
+		:raises Exception:
+		   If the platform with the given name does not exist.
+		"""
+		
+		return self.__engine_task(self.__watch, name)
 		
 	def offer(self, name, image):
 	
@@ -292,11 +384,7 @@ class Engine:
 		   If the platform with the given name does not exist.
 		"""
 		
-		stub = self.__platform_stubs.get(name)
-		plat_tasks = []
-		plat_tasks.append(stub.image_build(image))
-		plat_tasks.append(stub.image_publish(image))
-		return self.__engine_task(plat_tasks)
+		return self.__engine_task(self.__offer, name, image)
 		
 	def retire(self, name, image):
 	
@@ -315,11 +403,7 @@ class Engine:
 		   If the platform with the given name does not exist.
 		"""
 		
-		stub = self.__platform_stubs.get(name)
-		plat_tasks = []
-		plat_tasks.append(stub.image_remove(image))
-		plat_tasks.append(stub.image_unpublish(image))
-		return self.__engine_task(plat_tasks)
+		return self.__engine_task(self.__retire, name, image)
 		
 	def emerge(self, layout):
 	
@@ -334,10 +418,7 @@ class Engine:
 		   The task running the emerge process.
 		"""
 		
-		stub = self.__platform_stubs.get(name)
-		plat_tasks = []
-		plat_tasks.append(stub.construction(layout))
-		return self.__engine_task(plat_tasks)
+		return self.__engine_task(self.__emerge, layout)
 		
 	def store(self):
 	
@@ -357,4 +438,14 @@ class Engine:
 		jsons.write_dict(state_file, state, True)
 		state_file.write("\n")
 		state_file.close()
+		
+class EngineTaskCancelled(Exception):
+
+	"""
+	Engine task cancellation.
+	"""
+	
+	def __init__(self):
+	
+		super().__init__(None)
 

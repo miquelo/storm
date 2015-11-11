@@ -12,14 +12,6 @@ Module contents
 Submodules
 ----------
 
-storm.engine.container module
------------------------------
-
-.. automodule:: storm.engine.container
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 storm.engine.image module
 -------------------------
 

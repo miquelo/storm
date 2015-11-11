@@ -3,15 +3,14 @@ Available commands
 
 Its commands are intimately bound with :class:`storm.engine.Engine` class.
 
-For each command, excepting "platforms" command, the main process is the same.
-First of all, creates an engine using the file ``APP_DATA_DIR/engine.json`` as
-state resource. Then schedules the associated task for executing. Remains
-listening for engine events still "finished" event is fired. And, at the end,
-collects result and use it as output. Its final state is stored in the state
-resource.
+For each command, the main process is the same. First of all, creates an engine
+using the file ``APP_DATA_DIR/engine.json`` as state resource. Then schedules
+the associated task for executing. Remains listening for engine events still
+"finished" event is fired. And, at the end, collects result and use it as
+output. Its final state is stored in the state resource.
 
-Command "platforms"
--------------------
+Listing platforms
+-----------------
 
 Prints the list of registered platforms. Each entry has the name of the
 platform and the name of its provider.
@@ -30,8 +29,8 @@ provider *aws* named *pro-fb*.
      pro-up mixed
      pro-fb aws
 
-Command "register"
-------------------
+Registering some platform
+-------------------------
 
 Register a platform with the given name using the specified platform provider.
 Optional properties can be given by specifying properties resources.
@@ -46,15 +45,18 @@ registers a platform named *pre* of the provider *azure*. Files
 *pre-config.json* and *company-values.json* are parsed as JSON objects, merged
 and passed as register operation properties.
 
-Command "dismiss"
------------------
+Dismissing some platform
+------------------------
 
-Command "offer"
----------------
+Watching some platform
+----------------------
 
-Command "retire"
-----------------
+Offering an image to some platform
+----------------------------------
 
-Command "emerge"
-----------------
+Retiring an image from some platform
+------------------------------------
+
+Emerging some layout
+--------------------
 

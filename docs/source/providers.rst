@@ -6,4 +6,5 @@ Providers
    
    providers.resource
    providers.platform
+   providers.storage
 

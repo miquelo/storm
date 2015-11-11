@@ -5,7 +5,7 @@ Documentation
 -------------
 
 To build documentation at GitHub Pages, at the project root path and
-documentation branch, do the following thigs. If *gf-pages* remote branch
+documentation branch, follow next steps. If *gf-pages* remote branch
 exists, remove it.
 
 ```

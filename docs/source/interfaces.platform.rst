@@ -7,41 +7,30 @@ Interfaces for implementing platform provider.
 
    Platform main interface.
    
-   .. function:: configure(props=None)
+   .. function:: configure(context, props=None)
    
       Creates a task for configuring this platform with the given properties.
       
+      :param PlatformTaskContext context:
+         Current platform task context.
       :param props:
          Dictionary with the configuration properties.
-      :rtype:
-         PlatformTask
-      :return:
-         The created task.
          
-.. class:: PlatformTask
-
-   Task done by a platform.
-   
-   .. function:: run(context)
-   
-      Run this task.
-      
-      :param PlatformTaskContext context:
-         Execution context.
-         
-      :return:
-         The result value.
-         
-   .. function:: cancel()
-   
-      Cancel this task. It can be done in another thread.
-      
-      :rtype:
-         bool
-      :return:
-         True if cancellation was succesfully done. False otherwise.
-      
 .. class:: PlatformTaskContext
 
    Execution context of a platform task.
+   
+   .. function:: message(msg)
+   
+      Sends a message to the engine event queue.
+      
+      :param msg:
+         Message to be sent.
+         
+   .. function:: cancel_check()
+   
+      Check if caller engine task was cancelled.
+      
+      :raises storm.engine.EngineTaskCancelled:
+         If it was already cancelled.
 
