@@ -1,0 +1,529 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Resource interfaces &mdash; STORM 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="STORM 0.1.0 documentation" href="index.html"/>
+        <link rel="up" title="Interfaces" href="interfaces.html"/>
+        <link rel="next" title="Modules" href="modules.html"/>
+        <link rel="prev" title="Platform interfaces" href="interfaces.platform.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> STORM
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="interfaces.html">Interfaces</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="interfaces.engine.html">Engine interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interfaces.task.html">Task interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interfaces.platform.html">Platform interfaces</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Resource interfaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="providers.html">Providers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications.html">Applications</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">STORM</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="interfaces.html">Interfaces</a> &raquo;</li>
+      
+    <li>Resource interfaces</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/interfaces.resource.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="resource-interfaces">
+<h1>Resource interfaces<a class="headerlink" href="#resource-interfaces" title="Permalink to this headline">¶</a></h1>
+<p>Interfaces for resource management.</p>
+<dl class="class">
+<dt id="Resource">
+<em class="property">class </em><code class="descname">Resource</code><a class="headerlink" href="#Resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Protocol agnostic resource.</p>
+<dl class="attribute">
+<dt id="Resource.scheme">
+<code class="descname">scheme</code><a class="headerlink" href="#Resource.scheme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scheme of the resource URI.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Resource.location">
+<code class="descname">location</code><a class="headerlink" href="#Resource.location" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location of the resource URI of type <a class="reference internal" href="#ResourceLocation" title="ResourceLocation"><code class="xref py py-class docutils literal"><span class="pre">ResourceLocation</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Resource.path">
+<code class="descname">path</code><a class="headerlink" href="#Resource.path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path of the resource URI.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Resource.query">
+<code class="descname">query</code><a class="headerlink" href="#Resource.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query of the resource URI.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Resource.fragment">
+<code class="descname">fragment</code><a class="headerlink" href="#Resource.fragment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fragment of the resource URI.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.unref">
+<code class="descname">unref</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Resource.unref" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the URI representation of this resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)">string</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.ref">
+<code class="descname">ref</code><span class="sig-paren">(</span><em>path</em>, <em>query=None</em>, <em>fragment=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Resource.ref" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new resource referencing the given path relative to this
+resource path.</p>
+<p>The new resource will have the same scheme and location than this
+resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; Relative path.</li>
+<li><strong>query</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; Optional query part.</li>
+<li><strong>fragment</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; Optional fragment part.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#Resource" title="Resource">Resource</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.parent">
+<code class="descname">parent</code><span class="sig-paren">(</span><em>query=None</em>, <em>fragment=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Resource.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new resource referencing the parent path relative to this
+resource path.</p>
+<p>The new resource will have the same scheme and location than this
+resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; Optional query part.</li>
+<li><strong>fragment</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; Optional fragment part.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#Resource" title="Resource">Resource</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.exists">
+<code class="descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Resource.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if this resource already exists.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)">bool</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if this resource exists. False otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.name">
+<code class="descname">name</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Resource.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the base name of this resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)">string</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Resource.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete this resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)">bool</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if this resource was succesfully deleted. False otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Resource.open">
+<code class="descname">open</code><span class="sig-paren">(</span><em>flags</em><span class="sig-paren">)</span><a class="headerlink" href="#Resource.open" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open this resource and returns its associated stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>flags</strong> &#8211; Open flags.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#ResourceStream" title="ResourceStream">ResourceStream</a></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The associated stream.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises <a class="reference internal" href="modules.storm.module.html#storm.module.resource.ResourceNotFoundError" title="storm.module.resource.ResourceNotFoundError">storm.module.resource.ResourceNotFoundError</a>:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">If resource existence is needed but not honored.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ResourceLocation">
+<em class="property">class </em><code class="descname">ResourceLocation</code><a class="headerlink" href="#ResourceLocation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location of a resource.</p>
+<dl class="function">
+<dt id="ResourceLocation.__str__">
+<code class="descname">__str__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ResourceLocation.__str__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Literal representation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ResourceLocation.username">
+<code class="descname">username</code><a class="headerlink" href="#ResourceLocation.username" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location user name.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ResourceLocation.password">
+<code class="descname">password</code><a class="headerlink" href="#ResourceLocation.password" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location password.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ResourceLocation.hostname">
+<code class="descname">hostname</code><a class="headerlink" href="#ResourceLocation.hostname" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location host name.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ResourceLocation.port">
+<code class="descname">port</code><a class="headerlink" href="#ResourceLocation.port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Location integer value port.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ResourceStream">
+<em class="property">class </em><code class="descname">ResourceStream</code><a class="headerlink" href="#ResourceStream" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is like a <code class="xref py py-class docutils literal"><span class="pre">fileobj</span></code>.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ResourceHandler">
+<em class="property">class </em><code class="descname">ResourceHandler</code><a class="headerlink" href="#ResourceHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Protocol dependent resource handler.</p>
+<dl class="function">
+<dt id="ResourceHandler.exists">
+<code class="descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ResourceHandler.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if this resource already exists.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)">bool</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if this resource exists. False otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ResourceHandler.name">
+<code class="descname">name</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ResourceHandler.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the base name of this resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)">string</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ResourceHandler.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ResourceHandler.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete this resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)">bool</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if this resource was succesfully deleted. False otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ResourceHandler.open">
+<code class="descname">open</code><span class="sig-paren">(</span><em>flags</em><span class="sig-paren">)</span><a class="headerlink" href="#ResourceHandler.open" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open this resource and returns its associated stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>flags</strong> &#8211; Open flags.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#ResourceStream" title="ResourceStream">ResourceStream</a></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The associated stream.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Raises <a class="reference internal" href="modules.storm.module.html#storm.module.resource.ResourceNotFoundError" title="storm.module.resource.ResourceNotFoundError">storm.module.resource.ResourceNotFoundError</a>:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">If resource existence is needed but not honored.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="resource_isabs">
+<code class="descname">resource_isabs</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#resource_isabs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the given path is an absolute path.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/string.html#module-string" title="(in Python v2.7)"><em>string</em></a>) &#8211; The path to be checked.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)">bool</a></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if the given path is an absolute path. False otherwise.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="resource_abspath">
+<code class="descname">resource_abspath</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#resource_abspath" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="resource_dirname">
+<code class="descname">resource_dirname</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#resource_dirname" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="resource_join">
+<code class="descname">resource_join</code><span class="sig-paren">(</span><em>base_path</em>, <em>relative_path</em><span class="sig-paren">)</span><a class="headerlink" href="#resource_join" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="modules.html" class="btn btn-neutral float-right" title="Modules" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="interfaces.platform.html" class="btn btn-neutral" title="Platform interfaces" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Miquel A. Ferran.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

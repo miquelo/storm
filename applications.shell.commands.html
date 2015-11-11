@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Available commands &mdash; STORM 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="STORM 0.1.0 documentation" href="index.html"/>
+        <link rel="up" title="Application for shell" href="applications.shell.html"/>
+        <link rel="next" title="Application for GTK+" href="applications.gtk.html"/>
+        <link rel="prev" title="Application for shell" href="applications.shell.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> STORM
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="providers.html">Providers</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="applications.html">Applications</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="applications.shell.html">Application for shell</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="">Available commands</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#listing-platforms">Listing platforms</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#registering-some-platform">Registering some platform</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dismissing-some-platform">Dismissing some platform</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#watching-some-platform">Watching some platform</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#offering-an-image-to-some-platform">Offering an image to some platform</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#retiring-an-image-from-some-platform">Retiring an image from some platform</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#emerging-some-layout">Emerging some layout</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="applications.gtk.html">Application for GTK+</a></li>
+<li class="toctree-l2"><a class="reference internal" href="applications.windows.html">Application for Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="applications.web.html">Application for Web Browser</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">STORM</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="applications.html">Applications</a> &raquo;</li>
+      
+          <li><a href="applications.shell.html">Application for shell</a> &raquo;</li>
+      
+    <li>Available commands</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/applications.shell.commands.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="available-commands">
+<h1>Available commands<a class="headerlink" href="#available-commands" title="Permalink to this headline">¶</a></h1>
+<p>Its commands are intimately bound with <a class="reference internal" href="modules.storm.engine.html#storm.engine.Engine" title="storm.engine.Engine"><code class="xref py py-class docutils literal"><span class="pre">storm.engine.Engine</span></code></a> class.</p>
+<p>For each command, the main process is the same. First of all, creates an engine
+using the file <code class="docutils literal"><span class="pre">APP_DATA_DIR/engine.json</span></code> as state resource. Then schedules
+the associated task for executing. Remains listening for engine events still
+&#8220;finished&#8221; event is fired. And, at the end, collects result and use it as
+output. Its final state is stored in the state resource.</p>
+<div class="section" id="listing-platforms">
+<h2>Listing platforms<a class="headerlink" href="#listing-platforms" title="Permalink to this headline">¶</a></h2>
+<p>Prints the list of registered platforms. Each entry has the name of the
+platform and the name of its provider.</p>
+<p>The next example represents an engine with five registered platforms. Two,
+<em>local1</em> and <em>local2</em> of the provider <em>devel</em>. One of the provider <em>azure</em>
+named <em>pre</em>. Another one named <em>pro-up</em>, of the provider <em>mixed</em>. And one of
+provider <em>aws</em> named <em>pro-fb</em>.</p>
+<div class="code bash highlight-python"><div class="highlight"><pre>$ storm platforms
+  local1 devel
+  local2 devel
+  pre azure
+  pro-up mixed
+  pro-fb aws
+</pre></div>
+</div>
+</div>
+<div class="section" id="registering-some-platform">
+<h2>Registering some platform<a class="headerlink" href="#registering-some-platform" title="Permalink to this headline">¶</a></h2>
+<p>Register a platform with the given name using the specified platform provider.
+Optional properties can be given by specifying properties resources.</p>
+<p>For example,</p>
+<div class="code bash highlight-python"><div class="highlight"><pre>$ storm register pre azure pre-config.json company-values.json
+</pre></div>
+</div>
+<p>registers a platform named <em>pre</em> of the provider <em>azure</em>. Files
+<em>pre-config.json</em> and <em>company-values.json</em> are parsed as JSON objects, merged
+and passed as register operation properties.</p>
+</div>
+<div class="section" id="dismissing-some-platform">
+<h2>Dismissing some platform<a class="headerlink" href="#dismissing-some-platform" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="watching-some-platform">
+<h2>Watching some platform<a class="headerlink" href="#watching-some-platform" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="offering-an-image-to-some-platform">
+<h2>Offering an image to some platform<a class="headerlink" href="#offering-an-image-to-some-platform" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="retiring-an-image-from-some-platform">
+<h2>Retiring an image from some platform<a class="headerlink" href="#retiring-an-image-from-some-platform" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="emerging-some-layout">
+<h2>Emerging some layout<a class="headerlink" href="#emerging-some-layout" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="applications.gtk.html" class="btn btn-neutral float-right" title="Application for GTK+" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="applications.shell.html" class="btn btn-neutral" title="Application for shell" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Miquel A. Ferran.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
