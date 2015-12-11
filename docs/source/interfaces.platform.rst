@@ -20,12 +20,27 @@ Interfaces for implementing platform provider.
 
    Execution context of a platform task.
    
-   .. function:: message(msg)
+   .. function:: write_out(text)
    
-      Sends a message to the engine event queue.
+      Write text to the output stream.
       
-      :param msg:
-         Message to be sent.
+      :param string text:
+         Text to be written.
+      :rtype:
+         int
+      :return:
+         The number of written characters.
+         
+   .. function:: write_err(text)
+   
+      Write text to the error stream.
+      
+      :param string text:
+         Text to be written.
+      :rtype:
+         int
+      :return:
+         The number of written characters.
          
    .. function:: cancel_check()
    

@@ -139,9 +139,13 @@ class Engine:
 		
 			self.__worker = worker
 			
-		def message(self, msg):
+		def write_out(self, text):
 		
-			self.__worker.message(msg)
+			return self.__worker.write_out(text)
+			
+		def write_err(self, text):
+		
+			return self.__worker.write_err(text)
 			
 		def cancel_check(self):
 		
@@ -167,10 +171,10 @@ class Engine:
 		
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
-			self.__cancelled = False
 			self.__context = self.__PlatformTaskContext(self)
 			self.__future = None
 			self.__engine_task = None
+			self.__cancel_check = self.__cancel_check_pass
 			
 		def __dispatch_event(self, name, value=None):
 		
@@ -184,6 +188,14 @@ class Engine:
 			self.progress(1)
 			self.__dispatch_event("finished")
 			return result
+			
+		def __cancel_check_pass(self):
+		
+			pass
+			
+		def __cancel_check_raise(self):
+		
+			raise EngineTaskCancelled()
 			
 		def context(self):
 		
@@ -201,16 +213,21 @@ class Engine:
 			
 		def cancel(self):
 		
-			return self.__future.cancel()
+			cancelled = self.__future.cancel()
+			self.__cancel_check = __cancel_check_raise
+			return cancelled
+			
+		def write_out(self, text):
+		
+			pass
+			
+		def write_err(self, text):
+		
+			pass
 			
 		def cancel_check(self):
 		
-			if self.__cancelled:
-				raise EngineTaskCancelled()
-				
-		def message(self, msg):
-		
-			self.__dispatch_event("message", msg)
+			self.__cancel_check()
 			
 		def progress(self, value):
 		
