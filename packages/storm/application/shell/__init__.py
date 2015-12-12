@@ -23,9 +23,10 @@ from storm.module import properties
 from storm.module import resource
 
 import argparse
-import multiprocessing
 import os
+import queue
 import sys
+import threading
 
 application_name = "storm"
 
@@ -36,19 +37,21 @@ class EventQueue:
 
 	def __init__(self):
 	
-		self.__queue = multiprocessing.Queue()
+		self.__queue = queue.Queue()
+		self.__closed = False
 		
 	def __iter__(self):
 	
-		event = self.__queue.get()
-		while not event[1] != "finished":
-			yield event
-			event = self.__queue.get()
-			
+		while not self.__closed:
+			yield self.__queue.get()
+		
 	def dispatch(self, task, name, value):
 	
 		self.__queue.put(( task, name, value ))
 		
+	def close(self):
+	
+		self.__closed = True
 #
 # Command error
 #
@@ -79,12 +82,6 @@ def main():
 		appdata_res = resource.ref(os.environ["HOME"])
 		data_res_name = ".{}".format(application_name)
 	data_res = appdata_res.ref(data_res_name)
-	
-	# Create printer factory
-	printer_fact = printer.PrinterFactory()
-	
-	# Execute command
-	state_res = data_res.ref("engine.json")
 	
 	try:
 	
@@ -134,14 +131,15 @@ def main():
 		)
 		args = parser.parse_args(sys.argv[1:len(sys.argv)])
 		
-		# Update printer factory level
+		# Create printer factory
 		if args.verbose:
-			printer_fact.level = 1
+			printer_fact_level = 1
 		else:
-			printer_fact.level = 0
+			printer_fact_level = 0
+		printer_fact = printer.PrinterFactory(printer_fact_level)
 		
 		# Execute the command
-		args.command[0](eng, printer_fact, messages, args.arguments)
+		args.command[0](data_res, printer_fact, messages, args.arguments)
 		return 0
 		
 	except CommandError as err:
@@ -155,14 +153,10 @@ def main():
 		pr.print()
 		return 1
 		
-	finally:
-	
-		eng.store()
-		
 #
 # Command COMMANDS
 #
-def command_execute_commands(eng, printer_fact, messages, arguments):
+def command_execute_commands(data_res, printer_fact, messages, arguments):
 
 	pr = printer_fact.printer(sys.stdout)
 	
@@ -180,10 +174,43 @@ def command_execute_commands(eng, printer_fact, messages, arguments):
 	pr.print()
 	
 #
-# Execute a command for an engine call
+# Command PLATFORMS
 #
-def command_execute_engine_call(eng, eng_fn, arguments):
+def command_execute_platforms(data_res, printer_fact, messages, arguments):
 
-	event_queue = EventQueue()
-	eng = engine.Engine(state_res, event_queue)
+	# Parse arguments
+	parser = command_parser("platforms", messages)
+	parser.parse_args(arguments)
+	
+	pr = printer_fact.printer(sys.stdout)
+	queue = EventQueue()
+	eng = engine.Engine(data_res.ref("engine.json"), queue)
+	
+	try:
+	
+		task = eng.platforms()
+		entry_newline = ""
+		for event in queue:
+			if event[1] == "finished":
+				pr.print()
+				break
+			elif event[1] == "platform-entry":
+				name = event[2]["name"]
+				prov = event[2]["provider"]
+				pr.append("{}{} ({})".format(entry_newline, name, prov))
+				entry_newline = "\n"
+			
+	finally:
+	
+		eng.store()
+		queue.close()
+#
+# Create parser for command
+#
+def command_parser(cmd_name, messages):
+
+	return argparse.ArgumentParser(
+		prog="{} {}".format(application_name, cmd_name),
+		description=messages["command"][cmd_name]
+	)
 

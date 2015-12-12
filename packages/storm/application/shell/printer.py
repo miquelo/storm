@@ -20,26 +20,16 @@ import io
 
 class PrinterFactory:
 
-	def __init__(self):
+	def __init__(self, level=0):
 	
 		try:
-			self.__level = 0
+			self.__level = level
 			self.__colorama = importlib.import_module("colorama")
 			self.__colorama.init()
 			self.__printer = self.__printer_colorama
 		except:
 			self.__printer = self.__printer_default
 			
-	@property
-	def level(self):
-	
-		return self.__level
-	
-	@level.setter
-	def level(self, value):
-	
-		self.__level = value
-		
 	def printer(self, out):
 	
 		return self.__printer(out)

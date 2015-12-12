@@ -30,6 +30,7 @@ setup(
 	packages=find_packages("packages"),
 	namespace_packages=[
 		"storm",
+		"storm.application",
 		"storm.provider",
 		"storm.provider.resource"
 	],

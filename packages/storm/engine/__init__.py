@@ -41,152 +41,24 @@ class Engine:
 	   Executor used to run executor tasks.
 	"""
 	
-	class __PlatformStubs:
-	
-		def __init__(self):
-		
-			self.__stubs = {}
-			self.__access_lock = threading.Lock()
-			
-		def items(self):
-		
-			try:
-				self.__access_lock.acquire()
-				yield from self.__stubs.items()
-			finally:
-				self.__access_lock.release()
-			
-		def get(self, name):
-		
-			try:
-				self.__access_lock.acquire()
-				return self.__stubs[name]
-			except KeyError:
-				raise Exception("Platform '{}' does not exist".format(name))
-			finally:
-				self.__access_lock.release()
-				
-		def put(self, name, prov, props, state_res):
-		
-			try:
-				self.__access_lock.acquire()
-				if name in self.__stubs:
-					msg = "Platform '{}' already exists".format(name)
-					raise Exception(msg)
-				data_res = state_res.parent().ref("platforms").ref(name)
-				stub = self.__PlatformStub(prov, data_res, props)
-				self.__stubs[name] = stub
-				return stub
-			finally:
-				self.__access_lock.release()
-			
-		def remove(self, name):
-		
-			try:
-				self.__access_lock.acquire()
-				stub = self.get(name)
-				del self.__stubs[name]
-				return stub
-			finally:
-				self.__access_lock.release()
-				
-	class __PlatformStub:
-	
-		def __init__(self, prov, data_res, props):
-		
-			self.__prov = props
-			self.__props = props
-			
-			mod_name = "storm.provider.platform.{}".format(self.__prov)
-			mod = importlib.import_module(mod_name)
-			self.__platform = mod.Platform(data_res, self.__props)
-			
-		def provider(self):
-		
-			return self.__prov
-			
-		def properties(self):
-		
-			return self.__props
-			
-		def configure(self, context):
-		
-			return self.__platform.configure(context)
-			
-		def destroy(self, context):
-		
-			return self.__platform.destroy(context)
-			
-		def image_build(self, context, image):
-		
-			return self.__platform.image_build(context, image)
-			
-		def image_publish(self, context, image):
-		
-			return self.__platform.image_publish(context, image)
-			
-		def image_remove(self, context, image):
-		
-			return self.__platform.image_remove(context, image)
-			
-		def image_unpublish(self, context, image):
-		
-			return self.__platform.image_unpublish(context, image)
-			
-	class __PlatformTaskContext:
-	
-		def __init__(self, worker):
-		
-			self.__worker = worker
-			
-		def write_out(self, text):
-		
-			return self.__worker.write_out(text)
-			
-		def write_err(self, text):
-		
-			return self.__worker.write_err(text)
-			
-		def cancel_check(self):
-		
-			return self.__worker.cancel_check()
-			
-	class __EngineTask:
-	
-		def __init__(self, worker):
-		
-			self.__worker = worker
-			
-		def result(self, timeout=None):
-		
-			return self.__worker.result(timeout)
-			
-		def cancel(self):
-		
-			return self.__worker.cancel()
-				
 	class __EngineTaskWorker:
 	
 		def __init__(self, event_queue, task_fn):
 		
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
-			self.__context = self.__PlatformTaskContext(self)
+			self.__context = PlatformTaskContext(self)
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
 			
-		def __dispatch_event(self, name, value=None):
-		
-			self.__event_queue.dispatch(self.__engine_task, name, value)
-			
 		def __task_run(self, *args, **kwargs):
 		
-			self.__dispatch_event("started")
+			self.dispatch("started")
 			self.progress(0)
 			result = self.__task_fn(self, *args, **kwargs)
 			self.progress(1)
-			self.__dispatch_event("finished")
+			self.dispatch("finished")
 			return result
 			
 		def __cancel_check_pass(self):
@@ -203,7 +75,7 @@ class Engine:
 			
 		def submit(self, executor, args, kwargs):
 		
-			self.__engine_task = self.__EngineTask(self)
+			self.__engine_task = EngineTask(self)
 			self.__future = executor.submit(self.__task_run, *args, **kwargs)
 			return self.__engine_task
 			
@@ -216,6 +88,10 @@ class Engine:
 			cancelled = self.__future.cancel()
 			self.__cancel_check = __cancel_check_raise
 			return cancelled
+			
+		def dispatch(self, name, value=None):
+		
+			self.__event_queue.dispatch(self.__engine_task, name, value)
 			
 		def write_out(self, text):
 		
@@ -231,7 +107,7 @@ class Engine:
 			
 		def progress(self, value):
 		
-			self.__dispatch_event("progress", value)
+			self.dispatch("progress", value)
 			
 	def __init__(
 		self,
@@ -249,7 +125,7 @@ class Engine:
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
 		self.__task_executor = task_executor
-		self.__platform_stubs = self.__PlatformStubs()
+		self.__platform_stubs = PlatformStubs()
 		
 		try:
 			state_file = self.__state_res.open("r")
@@ -275,10 +151,12 @@ class Engine:
 		
 	def __platforms(self, worker):
 	
-		return {
-			name: stub.provider()
-			for name, stub in self.__platform_stubs.items()
-		}
+		for name, stub in self.__platform_stubs.items():
+			worker.dispatch("platform-entry", {
+				"name": name,
+				"provider": stub.provider()
+			});
+		return len(self.__platform_stubs)
 		
 	def __register(self, worker, name, prov, props):
 	
@@ -465,4 +343,144 @@ class EngineTaskCancelled(Exception):
 	def __init__(self):
 	
 		super().__init__(None)
+		
+class EngineTask:
+
+	def __init__(self, worker):
+	
+		self.__worker = worker
+		
+	def result(self, timeout=None):
+	
+		return self.__worker.result(timeout)
+		
+	def cancel(self):
+	
+		return self.__worker.cancel()
+		
+class PlatformStubs:
+
+	def __init__(self):
+	
+		self.__stubs = {}
+		self.__access_lock = threading.Lock()
+		# self.put("pepe", "aws-ecs", {}, resource.ref("/home/laguna"))
+		
+	def __len__(self):
+	
+		try:
+			self.__access_lock.acquire()
+			return len(self.__stubs)
+		finally:
+			self.__access_lock.release()
+			
+	def items(self):
+	
+		try:
+			self.__access_lock.acquire()
+			yield from self.__stubs.items()
+		finally:
+			self.__access_lock.release()
+		
+	def get(self, name):
+	
+		try:
+			self.__access_lock.acquire()
+			return self.__stubs[name]
+		except KeyError:
+			raise Exception("Platform '{}' does not exist".format(name))
+		finally:
+			self.__access_lock.release()
+			
+	def put(self, name, prov, props, state_res):
+	
+		try:
+			self.__access_lock.acquire()
+			if name in self.__stubs:
+				msg = "Platform '{}' already exists".format(name)
+				raise Exception(msg)
+			data_res = state_res.parent().ref("platforms").ref(name)
+			stub = PlatformStub(prov, data_res, props)
+			self.__stubs[name] = stub
+			return stub
+		finally:
+			self.__access_lock.release()
+		
+	def remove(self, name):
+	
+		try:
+			self.__access_lock.acquire()
+			stub = self.get(name)
+			del self.__stubs[name]
+			return stub
+		finally:
+			self.__access_lock.release()
+			
+class PlatformStub:
+
+	def __init__(self, prov, data_res, props):
+	
+		self.__prov = prov
+		self.__props = props
+		
+		try:
+			mod_name = "storm.provider.platform.{}".format(self.__prov)
+			mod = importlib.import_module(mod_name)
+			self.__platform = mod.Platform(data_res, self.__props)
+		except ImportError:
+			self.__platform = None
+		
+	def provider(self):
+	
+		return self.__prov
+		
+	def properties(self):
+	
+		return self.__props
+		
+	def configure(self, context):
+	
+		return self.__platform.configure(context)
+		
+	def destroy(self, context):
+	
+		return self.__platform.destroy(context)
+		
+	def image_build(self, context, image):
+	
+		return self.__platform.image_build(context, image)
+		
+	def image_publish(self, context, image):
+	
+		return self.__platform.image_publish(context, image)
+		
+	def image_remove(self, context, image):
+	
+		return self.__platform.image_remove(context, image)
+		
+	def image_unpublish(self, context, image):
+	
+		return self.__platform.image_unpublish(context, image)
+		
+class PlatformTaskContext:
+
+	def __init__(self, worker):
+	
+		self.__worker = worker
+		
+	def dispatch(self, name, value):
+		
+		self.__worker.dispatch(name, value)
+		
+	def write_out(self, text):
+	
+		return self.__worker.write_out(text)
+		
+	def write_err(self, text):
+	
+		return self.__worker.write_err(text)
+		
+	def cancel_check(self):
+	
+		return self.__worker.cancel_check()
 
