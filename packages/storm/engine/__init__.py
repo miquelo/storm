@@ -37,8 +37,6 @@ class Engine:
 	   Resource holding the state of the engine.
 	:param EngineEventQueue event_queue:
 	   Event queue used for dispatching engine task events.
-	:param TaskExecutor task_executor:
-	   Executor used to run executor tasks.
 	"""
 	
 	class __EngineTaskWorker:
@@ -86,7 +84,7 @@ class Engine:
 		def cancel(self):
 		
 			cancelled = self.__future.cancel()
-			self.__cancel_check = __cancel_check_raise
+			self.__cancel_check = self.__cancel_check_raise
 			return cancelled
 			
 		def dispatch(self, name, value=None):
@@ -112,8 +110,7 @@ class Engine:
 	def __init__(
 		self,
 		state_res,
-		event_queue=None,
-		task_executor=concurrent.futures.ThreadPoolExecutor(max_workers=10)
+		event_queue=None
 	):
 	
 		class IgnoreEventQueue():
@@ -124,7 +121,7 @@ class Engine:
 				
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
-		self.__task_executor = task_executor
+		self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 		self.__platform_stubs = PlatformStubs()
 		
 		try:
@@ -147,13 +144,15 @@ class Engine:
 	def __engine_task(self, task_fn, *args, **kwargs):
 	
 		worker = self.__EngineTaskWorker(self.__event_queue, task_fn)
-		return worker.submit(self.__task_executor, args, kwargs)
+		return worker.submit(self.__executor, args, kwargs)
 		
-	def __platforms(self, worker):
+	def __platforms(self, worker, out_os, err_os):
 	
 		for name, stub in self.__platform_stubs.items():
+			worker.cancel_check()
 			worker.dispatch("platform-entry", {
 				"name": name,
+				"available": stub.available(),
 				"provider": stub.provider()
 			});
 		return len(self.__platform_stubs)
@@ -191,18 +190,22 @@ class Engine:
 	
 		pass
 		
-	def platforms(self):
+	def platforms(self, out_os=None, err_os=None):
 	
 		"""
 		Returns a dictionary containing name/provider entries.
 		
+		:param out_os:
+		   Output stream.
+		:param err_os:
+		   Error output stream. 
 		:rtype:
 		   EngineTask
 		:return:
 		   The task running the platforms process.
 		"""
 		
-		return self.__engine_task(self.__platforms)
+		return self.__engine_task(self.__platforms, out_os, err_os)
 		
 	def register(self, name, prov, props=None):
 	
@@ -364,7 +367,6 @@ class PlatformStubs:
 	
 		self.__stubs = {}
 		self.__access_lock = threading.Lock()
-		# self.put("pepe", "aws-ecs", {}, resource.ref("/home/laguna"))
 		
 	def __len__(self):
 	
@@ -429,6 +431,10 @@ class PlatformStub:
 			self.__platform = mod.Platform(data_res, self.__props)
 		except ImportError:
 			self.__platform = None
+		
+	def available(self):
+	
+		return self.__platform is not None
 		
 	def provider(self):
 	

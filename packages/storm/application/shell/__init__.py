@@ -182,23 +182,25 @@ def command_execute_platforms(data_res, printer_fact, messages, arguments):
 	parser = command_parser("platforms", messages)
 	parser.parse_args(arguments)
 	
-	# Engine function
-	def engine_fn(eng, queue):
+	# Shared resources
+	pr = printer_fact.printer(sys.stdout)
 	
-		pr = printer_fact.printer(sys.stdout)
-		task = eng.platforms()
-		entry_newline = ""
-		for event in queue:
-			if event[1] == "finished":
-				pr.print()
-				break
-			elif event[1] == "platform-entry":
-				name = event[2]["name"]
-				prov = event[2]["provider"]
-				pr.append("{}{} ({})".format(entry_newline, name, prov))
-				entry_newline = "\n"
-				
-	command_engine_execute(data_res, engine_fn)
+	# Init function
+	def init_fn(eng):
+	
+		return eng.platforms()
+		
+	# Event function
+	def event_fn(eng, task, name, value):
+	
+		if name == "platform-entry":
+			plat_name = value["name"]
+			style = None if value["available"] else "dim"
+			plat_prov = value["provider"]
+			pr.append("{} ({})".format(plat_name, plat_prov), None, style)
+			pr.print()
+			
+	command_engine_execute(data_res, init_fn, event_fn)
 	
 #
 # Create parser for command
@@ -213,13 +215,24 @@ def command_parser(cmd_name, messages):
 #
 # Execute engine command function
 #
-def command_engine_execute(data_res, engine_fn):
+def command_engine_execute(data_res, init_fn, event_fn):
 	
 	try:
+	
 		queue = EventQueue()
 		eng = engine.Engine(data_res.ref("engine.json"), queue)
-		engine_fn(eng, queue)
+		task = init_fn(eng)
+		
+		for event in queue:
+			event_fn(eng, event[0], event[1], event[2])
+			if event[1] == "finished":
+				queue.close()
+				
+	except KeyboardInterrupt:
+	
+		task.cancel()
+		
 	finally:
+	
 		eng.store()
-		queue.close()
 
