@@ -182,12 +182,10 @@ def command_execute_platforms(data_res, printer_fact, messages, arguments):
 	parser = command_parser("platforms", messages)
 	parser.parse_args(arguments)
 	
-	pr = printer_fact.printer(sys.stdout)
-	queue = EventQueue()
-	eng = engine.Engine(data_res.ref("engine.json"), queue)
+	# Engine function
+	def engine_fn(eng, queue):
 	
-	try:
-	
+		pr = printer_fact.printer(sys.stdout)
 		task = eng.platforms()
 		entry_newline = ""
 		for event in queue:
@@ -199,11 +197,9 @@ def command_execute_platforms(data_res, printer_fact, messages, arguments):
 				prov = event[2]["provider"]
 				pr.append("{}{} ({})".format(entry_newline, name, prov))
 				entry_newline = "\n"
-			
-	finally:
+				
+	command_engine_execute(data_res, engine_fn)
 	
-		eng.store()
-		queue.close()
 #
 # Create parser for command
 #
@@ -213,4 +209,17 @@ def command_parser(cmd_name, messages):
 		prog="{} {}".format(application_name, cmd_name),
 		description=messages["command"][cmd_name]
 	)
+	
+#
+# Execute engine command function
+#
+def command_engine_execute(data_res, engine_fn):
+	
+	try:
+		queue = EventQueue()
+		eng = engine.Engine(data_res.ref("engine.json"), queue)
+		engine_fn(eng, queue)
+	finally:
+		eng.store()
+		queue.close()
 
