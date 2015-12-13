@@ -27,8 +27,10 @@ import os
 import queue
 import sys
 import threading
+import traceback
 
 application_name = "storm"
+messages = properties.load(__file__, "messages")
 
 #
 # Event queue
@@ -52,6 +54,7 @@ class EventQueue:
 	def close(self):
 	
 		self.__closed = True
+		
 #
 # Command error
 #
@@ -85,8 +88,6 @@ def main():
 	
 	try:
 	
-		messages = properties.load(__file__, "messages")
-		
 		# Parse arguments
 		def argparse_command(cmd_name):
 			cmd_fn_name = "command_execute_{}".format(cmd_name)
@@ -132,20 +133,16 @@ def main():
 		args = parser.parse_args(sys.argv[1:len(sys.argv)])
 		
 		# Create printer factory
-		if args.verbose:
-			printer_fact_level = 1
-		else:
-			printer_fact_level = 0
-		printer_fact = printer.PrinterFactory(printer_fact_level)
+		printer_fact = printer.PrinterFactory(1 if args.verbose else 0)
 		
 		# Execute the command
-		args.command[0](data_res, printer_fact, messages, args.arguments)
+		args.command[0](data_res, printer_fact, args.arguments)
 		return 0
 		
 	except CommandError as err:
 	
 		# Print error output
-		pr = eng.printer(sys.stderr)
+		pr = printer_fact.printer(sys.stderr)
 		err_msg = "{}".format(err)
 		if args.exceptions:
 			err_msg = "{}:\n{}".format(err_msg, traceback.format_exc())
@@ -156,7 +153,7 @@ def main():
 #
 # Command COMMANDS
 #
-def command_execute_commands(data_res, printer_fact, messages, arguments):
+def command_execute_commands(data_res, printer_fact, arguments):
 
 	pr = printer_fact.printer(sys.stdout)
 	
@@ -176,10 +173,10 @@ def command_execute_commands(data_res, printer_fact, messages, arguments):
 #
 # Command PLATFORMS
 #
-def command_execute_platforms(data_res, printer_fact, messages, arguments):
+def command_execute_platforms(data_res, printer_fact, arguments):
 
 	# Parse arguments
-	parser = command_parser("platforms", messages)
+	parser = command_parser("platforms")
 	parser.parse_args(arguments)
 	
 	# Shared resources
@@ -188,7 +185,7 @@ def command_execute_platforms(data_res, printer_fact, messages, arguments):
 	# Init function
 	def init_fn(eng):
 	
-		return eng.platforms()
+		return eng.platforms(sys.stdout, sys.stderr)
 		
 	# Event function
 	def event_fn(eng, task, name, value):
@@ -203,9 +200,54 @@ def command_execute_platforms(data_res, printer_fact, messages, arguments):
 	command_engine_execute(data_res, init_fn, event_fn)
 	
 #
+# Command REGISTER
+#
+def command_execute_register(data_res, printer_fact, arguments):
+
+	# Parse arguments
+	parser = command_parser("register")
+	parser.add_argument(
+		"platform_name",
+		metavar="platform",
+		type=str,
+		nargs=1,
+		help=messages["argument"]["platform"]
+	)
+	parser.add_argument(
+		"provider",
+		metavar="provider",
+		type=str,
+		nargs=1,
+		help=messages["argument"]["register.provider"]
+	)
+	parser.add_argument(
+		"props_res",
+		metavar="props_res",
+		type=argparse_resource,
+		nargs="*",
+		help=messages["argument"]["register.props_res"]
+	)
+	args = parser.parse_args(arguments)
+	
+	# Init function
+	def init_fn(eng):
+	
+		name = args.platform_name[0]
+		prov = args.provider[0]
+		props = props_collect(args.props_res)
+		return eng.register(name, prov, props, sys.stdout, sys.stderr)
+		
+	# Event function
+	def event_fn(eng, task, name, value):
+	
+		pass
+		
+	command_engine_execute(data_res, init_fn, event_fn)
+	
+#
 # Create parser for command
 #
-def command_parser(cmd_name, messages):
+def command_parser(cmd_name):
 
 	return argparse.ArgumentParser(
 		prog="{} {}".format(application_name, cmd_name),
@@ -218,7 +260,6 @@ def command_parser(cmd_name, messages):
 def command_engine_execute(data_res, init_fn, event_fn):
 	
 	try:
-	
 		queue = EventQueue()
 		eng = engine.Engine(data_res.ref("engine.json"), queue)
 		task = init_fn(eng)
@@ -227,12 +268,40 @@ def command_engine_execute(data_res, init_fn, event_fn):
 			event_fn(eng, event[0], event[1], event[2])
 			if event[1] == "finished":
 				queue.close()
-				
+		return task.result()
 	except KeyboardInterrupt:
-	
 		task.cancel()
-		
+		return None
+	except BaseException as err:
+		raise CommandError(err)
 	finally:
-	
 		eng.store()
+		
+#
+# Resource argument parsing
+#		
+def argparse_resource(uri):
+
+	res = resource.ref(uri)
+	
+	if res.exists():
+		return res
+	else:
+		msg = messages["error"]["invalid_resource_id"].format(uri)
+		raise argparse.ArgumentTypeError(msg)
+		
+#
+# Collect properties from files
+#
+def props_collect(args_props_res):
+
+	props = {}
+	for props_res in args_props_res:
+		props_file = props_res.open("r")
+		props_in = jsons.read(props_file)
+		if props_in is None or not props_in.isdict():
+			raise Exception("Properties must be a dictionary")
+		util.merge_dict(props, props_in.value())
+		props_file.close()
+	return props
 

@@ -41,7 +41,7 @@ class Engine:
 	
 	class __EngineTaskWorker:
 	
-		def __init__(self, event_queue, task_fn):
+		def __init__(self, event_queue, task_fn, out, err):
 		
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
@@ -49,15 +49,19 @@ class Engine:
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
+			self.__out = None if out is None else NoneOutput()
+			self.__err = None if err is None else NoneOutput()
 			
 		def __task_run(self, *args, **kwargs):
 		
-			self.dispatch("started")
-			self.progress(0)
-			result = self.__task_fn(self, *args, **kwargs)
-			self.progress(1)
-			self.dispatch("finished")
-			return result
+			try:
+				self.dispatch("started")
+				self.progress(0)
+				result = self.__task_fn(self, *args, **kwargs)
+				self.progress(1)
+				return result
+			finally:
+				self.dispatch("finished")
 			
 		def __cancel_check_pass(self):
 		
@@ -93,11 +97,11 @@ class Engine:
 			
 		def write_out(self, text):
 		
-			pass
+			self.__out.write(text)
 			
 		def write_err(self, text):
 		
-			pass
+			self.__err.write(text)
 			
 		def cancel_check(self):
 		
@@ -141,12 +145,12 @@ class Engine:
 		except resource.ResourceNotFoundError:
 			pass
 			
-	def __engine_task(self, task_fn, *args, **kwargs):
+	def __engine_task(self, task_fn, out, err, *args, **kwargs):
 	
-		worker = self.__EngineTaskWorker(self.__event_queue, task_fn)
+		worker = self.__EngineTaskWorker(self.__event_queue, task_fn, out, err)
 		return worker.submit(self.__executor, args, kwargs)
 		
-	def __platforms(self, worker, out_os, err_os):
+	def __platforms(self, worker):
 	
 		for name, stub in self.__platform_stubs.items():
 			worker.cancel_check()
@@ -190,24 +194,24 @@ class Engine:
 	
 		pass
 		
-	def platforms(self, out_os=None, err_os=None):
+	def platforms(self, out=None, err=None):
 	
 		"""
 		Returns a dictionary containing name/provider entries.
 		
-		:param out_os:
+		:param out:
 		   Output stream.
-		:param err_os:
-		   Error output stream. 
+		:param err:
+		   Error stream.
 		:rtype:
 		   EngineTask
 		:return:
 		   The task running the platforms process.
 		"""
 		
-		return self.__engine_task(self.__platforms, out_os, err_os)
+		return self.__engine_task(self.__platforms, out, err)
 		
-	def register(self, name, prov, props=None):
+	def register(self, name, prov, props=None, out=None, err=None):
 	
 		"""
 		Register a new platform with the given name implemented by the given
@@ -219,6 +223,10 @@ class Engine:
 		   The provider name which implements the registered platform.
 		:param dict props:
 		   Optional properties dictionary.
+		:param out:
+		   Output stream.
+		:param err:
+		   Error stream.
 		:rtype:
 		   EngineTask
 		:return:
@@ -227,7 +235,7 @@ class Engine:
 		   If a platform with the given name already exists.
 		"""
 		
-		return self.__engine_task(self.__register, name, prov, props)
+		return self.__engine_task(self.__register, out, err, name, prov, props)
 		
 	def dismiss(self, name, destroy=False):
 	
@@ -428,13 +436,21 @@ class PlatformStub:
 		try:
 			mod_name = "storm.provider.platform.{}".format(self.__prov)
 			mod = importlib.import_module(mod_name)
-			self.__platform = mod.Platform(data_res, self.__props)
+			self.__plat = mod.Platform(data_res, self.__props)
 		except ImportError:
-			self.__platform = None
+			self.__plat = None
+			
+	def __platform(self):
+	
+		if not self.available():
+			msg = "Platform with provider '{}'".format(self.__prov)
+			msg = "{} is not available".format(msg)
+			raise LookupError(msg)
+		return self.__plat
 		
 	def available(self):
 	
-		return self.__platform is not None
+		return self.__plat is not None
 		
 	def provider(self):
 	
@@ -446,27 +462,33 @@ class PlatformStub:
 		
 	def configure(self, context):
 	
-		return self.__platform.configure(context)
+		return self.__platform().configure(context)
 		
 	def destroy(self, context):
 	
-		return self.__platform.destroy(context)
+		return self.__platform().destroy(context)
 		
 	def image_build(self, context, image):
 	
-		return self.__platform.image_build(context, image)
+		return self.__platform().image_build(context, image)
 		
 	def image_publish(self, context, image):
 	
-		return self.__platform.image_publish(context, image)
+		return self.__platform().image_publish(context, image)
 		
 	def image_remove(self, context, image):
 	
-		return self.__platform.image_remove(context, image)
+		return self.__platform().image_remove(context, image)
 		
 	def image_unpublish(self, context, image):
 	
-		return self.__platform.image_unpublish(context, image)
+		return self.__platform().image_unpublish(context, image)
+		
+class NoneOutput:
+
+	def write(self, text):
+	
+		pass
 		
 class PlatformTaskContext:
 
