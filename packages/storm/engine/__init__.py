@@ -79,6 +79,7 @@ class Engine:
 			
 		def __cancel_check_raise(self):
 		
+			self.__cancel_check = self.__cancel_check_pass
 			raise EngineTaskCancelled()
 			
 		def context(self):
