@@ -245,6 +245,43 @@ def command_execute_register(data_res, printer_fact, arguments):
 	command_engine_execute(data_res, init_fn, event_fn)
 	
 #
+# Command DISMISS
+#
+def command_execute_dismiss(data_res, printer_fact, arguments):
+
+	# Parse arguments
+	parser = command_parser("dismiss")
+	parser.add_argument(
+		"platform_name",
+		metavar="platform",
+		type=str,
+		nargs=1,
+		help=messages["argument"]["platform"]
+	)
+	parser.add_argument(
+		"-d",
+		required=False,
+		action="store_true",
+		default=False,
+		dest="destroy",
+		help=messages["argument"]["dismiss.destroy"]
+	)
+	args = parser.parse_args(arguments)
+	
+	# Init function
+	def init_fn(eng):
+	
+		name = args.platform_name[0]
+		return eng.dismiss(name, args.destroy)
+		
+	# Event function
+	def event_fn(eng, task, name, value):
+	
+		pass
+		
+	command_engine_execute(data_res, init_fn, event_fn)
+	
+#
 # Create parser for command
 #
 def command_parser(cmd_name):
@@ -262,9 +299,7 @@ def command_engine_execute(data_res, init_fn, event_fn):
 	try:
 		state_res = data_res.ref("engine.json")
 		queue = EventQueue()
-		out = sys.stdout
-		err = sys.stderr
-		eng = engine.Engine(state_res, queue, out, err)
+		eng = engine.Engine(state_res, queue, sys.stdout, sys.stderr)
 		task = init_fn(eng)
 		
 		for event in queue:

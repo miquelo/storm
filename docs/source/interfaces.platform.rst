@@ -20,27 +20,28 @@ Interfaces for implementing platform provider.
 
    Execution context of a platform task.
    
-   .. function:: write_out(text)
+   .. function:: dispatch(name, value=None)
    
-      Write text to the output stream.
+      Dispatch an engine task event.
       
-      :param string text:
-         Text to be written.
-      :rtype:
-         int
+      :param string name:
+         Event name.
+      :param value:
+         Event value.
+   
+   .. function:: out()
+   
+      Return the engine output stream.
+      
       :return:
-         The number of written characters.
+         The engine output stream.
          
-   .. function:: write_err(text)
+   .. function:: err()
    
-      Write text to the error stream.
+      Return the engine error stream.
       
-      :param string text:
-         Text to be written.
-      :rtype:
-         int
       :return:
-         The number of written characters.
+         The engine error stream.
          
    .. function:: cancel_check()
    

@@ -15,7 +15,11 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def execute(context, *cmd_args):
+from storm import engine
+
+import subprocess
+
+def execute(context, cmd_args, wait_timeout=0.1):
 
 	"""
 	Executes a command within a platform task context.
@@ -26,5 +30,33 @@ def execute(context, *cmd_args):
 	   Command arguments.
 	"""
 	
-	pass
+	proc = subprocess.Popen(
+		cmd_args,
+		stdout=context.out(),
+		stderr=context.err()
+	)
+	while True:
+		try:
+			context.cancel_check()
+			return proc.wait(wait_timeout)
+		except TimeoutExpired:
+			pass
+		except engine.EngineTaskCancelled:
+			proc.terminate()
+			while True:
+				try:
+					context.cancel_check()
+					return proc.wait(wait_timeout)
+				except TimeoutExpired:
+					pass
+				except engine.EngineTaskCancelled:
+					proc.kill()
+					while True:
+						try:
+							context.cancel_check()
+							return proc.wait(wait_timeout)
+						except TimeoutExpired:
+							pass
+						except engine.EngineTaskCancelled:
+							return None
 

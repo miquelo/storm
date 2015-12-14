@@ -105,13 +105,13 @@ class Engine:
 		
 			self.__event_queue.dispatch(self.__engine_task, name, value)
 			
-		def write_out(self, text):
+		def out(self):
 		
-			self.__out.write(text)
+			return self.__out
 			
-		def write_err(self, text):
+		def err(self):
 		
-			self.__err.write(text)
+			return self.__err
 			
 		def cancel_check(self):
 		
@@ -184,7 +184,7 @@ class Engine:
 	
 		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
 		worker.progress(None)
-		stub.configure(worker.context())
+		stub.configure(worker.context(), props)
 		
 	def __dismiss(self, worker, name, destroy):
 	
@@ -431,9 +431,11 @@ class PlatformStubs:
 	
 		try:
 			self.__access_lock.acquire()
-			stub = self.get(name)
+			stub = self.__stubs[name]
 			del self.__stubs[name]
 			return stub
+		except KeyError:
+			raise Exception("Platform '{}' does not exist".format(name))
 		finally:
 			self.__access_lock.release()
 			
@@ -471,9 +473,9 @@ class PlatformStub:
 	
 		return self.__props
 		
-	def configure(self, context):
+	def configure(self, context, props):
 	
-		return self.__platform().configure(context)
+		return self.__platform().configure(context, props)
 		
 	def destroy(self, context):
 	
@@ -505,13 +507,13 @@ class PlatformTaskContext:
 		
 		self.__worker.dispatch(name, value)
 		
-	def write_out(self, text):
+	def out(self):
 	
-		return self.__worker.write_out(text)
+		return self.__worker.out()
 		
-	def write_err(self, text):
+	def err(self):
 	
-		return self.__worker.write_err(text)
+		return self.__worker.err()
 		
 	def cancel_check(self):
 	
