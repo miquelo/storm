@@ -185,7 +185,7 @@ def command_execute_platforms(data_res, printer_fact, arguments):
 	# Init function
 	def init_fn(eng):
 	
-		return eng.platforms(sys.stdout, sys.stderr)
+		return eng.platforms()
 		
 	# Event function
 	def event_fn(eng, task, name, value):
@@ -235,7 +235,7 @@ def command_execute_register(data_res, printer_fact, arguments):
 		name = args.platform_name[0]
 		prov = args.provider[0]
 		props = props_collect(args.props_res)
-		return eng.register(name, prov, props, sys.stdout, sys.stderr)
+		return eng.register(name, prov, props)
 		
 	# Event function
 	def event_fn(eng, task, name, value):
@@ -260,8 +260,11 @@ def command_parser(cmd_name):
 def command_engine_execute(data_res, init_fn, event_fn):
 	
 	try:
+		state_res = data_res.ref("engine.json")
 		queue = EventQueue()
-		eng = engine.Engine(data_res.ref("engine.json"), queue)
+		out = sys.stdout
+		err = sys.stderr
+		eng = engine.Engine(state_res, queue, out, err)
 		task = init_fn(eng)
 		
 		for event in queue:

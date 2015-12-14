@@ -37,20 +37,30 @@ class Engine:
 	   Resource holding the state of the engine.
 	:param EngineEventQueue event_queue:
 	   Event queue used for dispatching engine task events.
+	:param out:
+	   Output stream.
+	:param err:
+	   Error stream.
 	"""
 	
+	class __NoneOutput:
+
+		def write(self, text):
+		
+			pass
+
 	class __EngineTaskWorker:
 	
 		def __init__(self, event_queue, task_fn, out, err):
 		
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
+			self.__out = out
+			self.__err = err
 			self.__context = PlatformTaskContext(self)
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
-			self.__out = None if out is None else NoneOutput()
-			self.__err = None if err is None else NoneOutput()
 			
 		def __task_run(self, *args, **kwargs):
 		
@@ -114,7 +124,9 @@ class Engine:
 	def __init__(
 		self,
 		state_res,
-		event_queue=None
+		event_queue=None,
+		out=None,
+		err=None
 	):
 	
 		class IgnoreEventQueue():
@@ -125,6 +137,8 @@ class Engine:
 				
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
+		self.__out = out or self.__NoneOutput()
+		self.__err = err or self.__NoneOutput()
 		self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 		self.__platform_stubs = PlatformStubs()
 		
@@ -145,9 +159,14 @@ class Engine:
 		except resource.ResourceNotFoundError:
 			pass
 			
-	def __engine_task(self, task_fn, out, err, *args, **kwargs):
+	def __engine_task(self, task_fn, *args, **kwargs):
 	
-		worker = self.__EngineTaskWorker(self.__event_queue, task_fn, out, err)
+		worker = self.__EngineTaskWorker(
+			self.__event_queue,
+			task_fn,
+			self.__out,
+			self.__err
+		)
 		return worker.submit(self.__executor, args, kwargs)
 		
 	def __platforms(self, worker):
@@ -194,24 +213,20 @@ class Engine:
 	
 		pass
 		
-	def platforms(self, out=None, err=None):
+	def platforms(self):
 	
 		"""
 		Returns a dictionary containing name/provider entries.
 		
-		:param out:
-		   Output stream.
-		:param err:
-		   Error stream.
 		:rtype:
 		   EngineTask
 		:return:
 		   The task running the platforms process.
 		"""
 		
-		return self.__engine_task(self.__platforms, out, err)
+		return self.__engine_task(self.__platforms)
 		
-	def register(self, name, prov, props=None, out=None, err=None):
+	def register(self, name, prov, props=None):
 	
 		"""
 		Register a new platform with the given name implemented by the given
@@ -223,10 +238,6 @@ class Engine:
 		   The provider name which implements the registered platform.
 		:param dict props:
 		   Optional properties dictionary.
-		:param out:
-		   Output stream.
-		:param err:
-		   Error stream.
 		:rtype:
 		   EngineTask
 		:return:
@@ -235,7 +246,7 @@ class Engine:
 		   If a platform with the given name already exists.
 		"""
 		
-		return self.__engine_task(self.__register, out, err, name, prov, props)
+		return self.__engine_task(self.__register, name, prov, props)
 		
 	def dismiss(self, name, destroy=False):
 	
@@ -483,12 +494,6 @@ class PlatformStub:
 	def image_unpublish(self, context, image):
 	
 		return self.__platform().image_unpublish(context, image)
-		
-class NoneOutput:
-
-	def write(self, text):
-	
-		pass
 		
 class PlatformTaskContext:
 
