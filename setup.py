@@ -17,9 +17,6 @@
 
 from setuptools import setup, find_packages
 
-import configparser
-import os.path
-
 setup(
 	name="storm",
 	version="0.1.0",
@@ -29,26 +26,13 @@ setup(
 	
 	packages=find_packages("packages"),
 	namespace_packages=[
-		"storm",
-		"storm.application",
-		"storm.provider",
-		"storm.provider.resource"
+		"storm"
 	],
 	package_dir={
 		"": "packages"
 	},
-	extras_require={
-		"color": [
-			"colorama>=0.3.3"
-		]
-	},
 	test_suite="testsuite.storm",
 	
-	entry_points={
-		"console_scripts": [
-			"storm=storm.application.shell:main"
-		]
-	},
 	url="http://pypi.python.org/pypi/storm_0.1.0/",
 	
 	license="LICENSE.txt",

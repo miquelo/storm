@@ -13,8 +13,6 @@ Contents:
    
    interfaces
    modules
-   providers
-   applications
 
 Indices and tables
 ==================
