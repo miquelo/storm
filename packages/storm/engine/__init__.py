@@ -185,7 +185,7 @@ class Engine:
 	
 		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
 		worker.progress(None)
-		stub.configure(worker.context(), props)
+		stub.configure(worker.context())
 		
 	def __dismiss(self, worker, name, destroy):
 	
@@ -450,7 +450,8 @@ class PlatformStub:
 		try:
 			mod_name = "storm.provider.platform.{}".format(self.__prov)
 			mod = importlib.import_module(mod_name)
-			self.__plat = mod.Platform(data_res, self.__props)
+			rprops = self.__resolvable(self.__props, self.__props)
+			self.__plat = mod.Platform(data_res, rprops)
 		except ImportError:
 			self.__plat = None
 			
@@ -461,6 +462,154 @@ class PlatformStub:
 			msg = "{} is not available".format(msg)
 			raise LookupError(msg)
 		return self.__plat
+		
+	def __resolve(self, r_in, r_out, r_vars):
+
+		class Resolver:
+
+			def __init__(self, r_out, r_vars):
+				self.__r_out = r_out
+				self.__r_vars = r_vars
+				self.__expr = io.StringIO()
+				self.__update = self.__update_plain
+		
+			def update(self, c):
+				self.__update(c)
+		
+			def __update_plain(self, c):
+				if c == '#':
+					self.__update = self.__update_sharp
+				else:
+					self.__r_out.write(c)
+			
+			def __update_sharp(self, c):
+				if c == '{':
+					self.__update = self.__update_expr
+				else:
+					if c == '#':
+						self.__update = self.__update_sharpn
+					else:
+						self.__update = self.__update_plain
+						self.__r_out.write('#')
+					self.__r_out.write(c)
+			
+			def __update_sharpn(self, c):
+				if c != '#':
+					self.__update = self.__update_plain
+				self.__r_out.write(c)
+		
+			def __update_expr(self, c):
+				if c == '}':
+					self.__update = self.__update_plain
+					resolver = Resolver(self.__r_out, self.__r_vars)
+					self.__expr.seek(0)
+					for c in eval(self.__expr.read(), {}, self.__r_vars):
+						resolver.update(c)
+					self.__expr = io.StringIO()
+				else:
+					if c == '\'':
+						self.__update = self.__update_expr_quot
+					self.__expr.write(c)
+			
+			def __update_expr_quot(self, c):
+				if c == '\'':
+					self.__update = self.__update_expr
+				self.__expr.write(c)
+			
+		resolver = Resolver(r_out, r_vars)
+		c = r_in.read(1)
+		while len(c) > 0:
+			resolver.update(c)
+			c = r_in.read(1)
+		
+	def __resolvable(self, obj, props):
+
+		def resolvable_result(obj):
+	
+			if isinstance(obj, list):
+				return ResolvableList(obj)
+			if isinstance(obj, dict):
+				return ResolvableDict(obj)
+			if isinstance(obj, str):
+				r_in = io.StringIO(obj)
+				r_out = io.StringIO()
+				self.__resolve(r_in, r_out, props)
+				r_out.seek(0)
+				return r_out.read()
+			return obj
+		
+		class ResolvableList(list):
+	
+			def __init__(self, obj):
+		
+				self.extend(obj)
+			
+			def __getitem__(self, key):
+		
+				return resolvable_result(super().__getitem__(key))
+			
+			def __iter__(self):
+		
+				return ResolvableListIterator(super().__iter__())
+		
+			def __reversed__(self):
+		
+				return ResolvableListIterator(super().__reversed__())
+			
+		class ResolvableListIterator:
+	
+			def __init__(self, it):
+		
+				self.__it = it
+		
+			def __iter__(self):
+		
+				return self
+		
+			def __next__(self):
+		
+				return resolvable_result(self.__it.__next__())
+		
+		class ResolvableDict(dict):
+	
+			def __init__(self, obj):
+		
+				self.update(obj)
+			
+			def __getitem__(self, key):
+		
+				return resolvable_result(super().__getitem__(key))
+			
+			def __iter__(self):
+		
+				return ResolvableDictIterator(super().__iter__())
+		
+			def __reversed__(self):
+		
+				return ResolvableDictIterator(super().__reversed__())
+		
+			def items(self):
+		
+				return [
+					(key, resolvable_result(value))
+					for key, value in super().items()
+				]
+					
+		class ResolvableDictIterator:
+
+			def __init__(self, it):
+		
+				self.__it = it
+			
+			def __iter__(self):
+		
+				return self
+		
+			def __next__(self):
+		
+				return self.__it.__next__()
+			
+		return resolvable_result(obj)
 		
 	def available(self):
 	
@@ -474,9 +623,9 @@ class PlatformStub:
 	
 		return self.__props
 		
-	def configure(self, context, props):
+	def configure(self, context):
 	
-		return self.__platform().configure(context, props)
+		return self.__platform().configure(context)
 		
 	def destroy(self, context):
 	
