@@ -17,46 +17,64 @@
 
 from storm import engine
 
+import os
 import subprocess
 
-def execute(context, cmd_args, wait_timeout=0.1):
+def execute(context, cmd_args, working_dir=None, wait_timeout=0.1):
 
 	"""
-	Executes a command within a platform task context.
+	Executes a local system command within a platform task context.
 	
 	:param PlatformTaskContext context:
 	   The platform task context.
-	:param cmd_args:
+	:param list cmd_args:
 	   Command arguments.
+	:param string working_dir:
+	   Working directory. Current working directory if set to None.
+	:param float wait_timeout:
+	   Time in seconds between cancel checkings.
+	:rtype:
+	   int
+	:return:
+	   Error level code or None if execution was not completed.
 	"""
 	
-	proc = subprocess.Popen(
-		cmd_args,
-		stdout=context.out(),
-		stderr=context.err()
-	)
-	while True:
-		try:
-			context.cancel_check()
-			return proc.wait(wait_timeout)
-		except TimeoutExpired:
-			pass
-		except engine.EngineTaskCancelled:
-			proc.terminate()
-			while True:
-				try:
-					context.cancel_check()
-					return proc.wait(wait_timeout)
-				except TimeoutExpired:
-					pass
-				except engine.EngineTaskCancelled:
-					proc.kill()
-					while True:
-						try:
-							context.cancel_check()
-							return proc.wait(wait_timeout)
-						except TimeoutExpired:
-							pass
-						except engine.EngineTaskCancelled:
-							return None
+	try:
+		old_working_dir = None
+		if working_dir is not None:
+			old_working_dir = os.getcwd()
+			os.chdir(working_dir)
+			
+		proc = subprocess.Popen(
+			cmd_args,
+			stdout=context.out(),
+			stderr=context.err()
+		)
+		while True:
+			try:	
+				context.cancel_check()
+				return proc.wait(wait_timeout)
+			except TimeoutExpired:
+				pass
+			except engine.EngineTaskCancelled:
+				proc.terminate()
+				while True:
+					try:
+						context.cancel_check()
+						return proc.wait(wait_timeout)
+					except TimeoutExpired:
+						pass
+					except engine.EngineTaskCancelled:
+						proc.kill()
+						while True:
+							try:
+								context.cancel_check()
+								return proc.wait(wait_timeout)
+							except TimeoutExpired:
+								pass
+							except engine.EngineTaskCancelled:
+								return None
+	finally:
+		if old_working_dir is not None:
+			os.chdir(old_working_dir)
 
