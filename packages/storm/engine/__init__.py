@@ -43,16 +43,32 @@ class Engine:
 	   Error stream.
 	"""
 	
-	class __NoneOutput:
-
-		def write(self, text):
-		
-			pass
-
 	class __EngineTaskWorker:
 	
 		def __init__(self, event_queue, task_fn, out, err):
 		
+			class PlatformTaskContext:
+			
+				def __init__(self, worker):
+				
+					self.__worker = worker
+					
+				def dispatch(self, name, value):
+				
+					self.__worker.dispatch(name, value)
+					
+				def out(self):
+				
+					return self.__worker.out()
+					
+				def err(self):
+				
+					return self.__worker.err()
+					
+				def cancel_check(self):
+				
+					return self.__worker.cancel_check()
+					
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
 			self.__out = out
@@ -88,6 +104,20 @@ class Engine:
 			
 		def submit(self, executor, args, kwargs):
 		
+			class EngineTask:
+			
+				def __init__(self, worker):
+				
+					self.__worker = worker
+				
+				def result(self, timeout=None):
+				
+					return self.__worker.result(timeout)
+				
+				def cancel(self):
+				
+					return self.__worker.cancel()
+					
 			self.__engine_task = EngineTask(self)
 			self.__future = executor.submit(self.__task_run, *args, **kwargs)
 			return self.__engine_task
@@ -130,16 +160,295 @@ class Engine:
 		err=None
 	):
 	
+		def resolvable(obj, props):
+		
+			def resolvable_result(obj):
+			
+				if isinstance(obj, list):
+					return ResolvableList(obj)
+				if isinstance(obj, dict):
+					return ResolvableDict(obj)
+				if isinstance(obj, str):
+					r_in = io.StringIO(obj)
+					r_out = io.StringIO()
+					resolve(r_in, r_out, props)
+					r_out.seek(0)
+					return r_out.read()
+				return obj
+				
+			def resolve(self, r_in, r_out, r_vars):
+			
+				resolver = Resolver(r_out, r_vars)
+				c = r_in.read(1)
+				while len(c) > 0:
+					resolver.update(c)
+					c = r_in.read(1)
+					
+			class ResolvableList(list):
+			
+				def __init__(self, obj):
+				
+					self.extend(obj)
+					
+				def __getitem__(self, key):
+				
+					return resolvable_result(super().__getitem__(key))
+					
+				def __iter__(self):
+				
+					return ResolvableListIterator(super().__iter__())
+					
+				def __reversed__(self):
+				
+					return ResolvableListIterator(super().__reversed__())
+					
+			class ResolvableListIterator:
+			
+				def __init__(self, it):
+				
+					self.__it = it
+					
+				def __iter__(self):
+				
+					return self
+					
+				def __next__(self):
+				
+					return resolvable_result(self.__it.__next__())
+					
+			class ResolvableDict(dict):
+			
+				def __init__(self, obj):
+				
+					self.update(obj)
+					
+				def __getitem__(self, key):
+				
+					return resolvable_result(super().__getitem__(key))
+					
+				def __iter__(self):
+				
+					return ResolvableDictIterator(super().__iter__())
+					
+				def __reversed__(self):
+				
+					return ResolvableDictIterator(super().__reversed__())
+					
+				def items(self):
+				
+					return [
+						(key, resolvable_result(value))
+						for key, value in super().items()
+					]
+					
+			class ResolvableDictIterator:
+			
+				def __init__(self, it):
+				
+					self.__it = it
+					
+				def __iter__(self):
+				
+					return self
+					
+				def __next__(self):
+				
+					return self.__it.__next__()
+					
+			return resolvable_result(obj)
+			
 		class IgnoreEventQueue():
 		
 			def dispatch(self, task, name, value):
 			
 				pass
 				
+		class NoneOutput:
+		
+			def write(self, text):
+			
+				pass
+				
+		class PlatformStubs:
+		
+			def __init__(self):
+			
+				self.__stubs = {}
+				self.__access_lock = threading.Lock()
+				
+			def __len__(self):
+			
+				try:
+					self.__access_lock.acquire()
+					return len(self.__stubs)
+				finally:
+					self.__access_lock.release()
+					
+			def items(self):
+			
+				try:
+					self.__access_lock.acquire()
+					yield from self.__stubs.items()
+				finally:
+					self.__access_lock.release()
+					
+			def get(self, name):
+			
+				try:
+					self.__access_lock.acquire()
+					return self.__stubs[name]
+				except KeyError:
+					raise Exception("Platform '{}' does not exist".format(name))
+				finally:
+					self.__access_lock.release()
+					
+			def put(self, name, prov, props, state_res):
+			
+				try:
+					self.__access_lock.acquire()
+					if name in self.__stubs:
+						msg = "Platform '{}' already exists".format(name)
+						raise Exception(msg)
+					data_res = state_res.parent().ref("platforms").ref(name)
+					stub = PlatformStub(prov, data_res, props)
+					self.__stubs[name] = stub
+					return stub
+				finally:
+					self.__access_lock.release()
+					
+			def remove(self, name):
+			
+				try:
+					self.__access_lock.acquire()
+					stub = self.__stubs[name]
+					del self.__stubs[name]
+					return stub
+				except KeyError:
+					raise Exception("Platform '{}' does not exist".format(name))
+				finally:
+					self.__access_lock.release()
+					
+		class PlatformStub:
+		
+			def __init__(self, prov, data_res, props):
+			
+				self.__prov = prov
+				self.__props = props
+				
+				try:
+					mod_name = "storm.provider.platform.{}".format(self.__prov)
+					mod = importlib.import_module(mod_name)
+					rprops = resolvable(self.__props, self.__props)
+					self.__plat = mod.Platform(data_res, rprops)
+				except ImportError:
+					self.__plat = None
+					
+			def __platform(self):
+			
+				if not self.available():
+					msg = "Platform with provider '{}'".format(self.__prov)
+					msg = "{} is not available".format(msg)
+					raise LookupError(msg)
+				return self.__plat
+				
+			def available(self):
+			
+				return self.__plat is not None
+				
+			def provider(self):
+			
+				return self.__prov
+				
+			def properties(self):
+			
+				return self.__props
+				
+			def configure(self, context):
+			
+				return self.__platform().configure(context)
+				
+			def destroy(self, context):
+			
+				return self.__platform().destroy(context)
+				
+			def image_build(self, context, image):
+			
+				return self.__platform().image_build(context, image)
+				
+			def image_publish(self, context, image):
+			
+				return self.__platform().image_publish(context, image)
+				
+			def image_remove(self, context, image):
+			
+				return self.__platform().image_remove(context, image)
+				
+			def image_unpublish(self, context, image):
+			
+				return self.__platform().image_unpublish(context, image)
+				
+		class Resolver:
+			
+			def __init__(self, r_out, r_vars):
+			
+				self.__r_out = r_out
+				self.__r_vars = r_vars
+				self.__expr = io.StringIO()
+				self.__update = self.__update_plain
+				
+			def update(self, c):
+			
+				self.__update(c)
+				
+			def __update_plain(self, c):
+			
+				if c == '#':
+					self.__update = self.__update_sharp
+				else:
+					self.__r_out.write(c)
+					
+			def __update_sharp(self, c):
+			
+				if c == '{':
+					self.__update = self.__update_expr
+				else:
+					if c == '#':
+						self.__update = self.__update_sharpn
+					else:
+						self.__update = self.__update_plain
+						self.__r_out.write('#')
+					self.__r_out.write(c)
+					
+			def __update_sharpn(self, c):
+			
+				if c != '#':
+					self.__update = self.__update_plain
+				self.__r_out.write(c)
+				
+			def __update_expr(self, c):
+			
+				if c == '}':
+					self.__update = self.__update_plain
+					resolver = Resolver(self.__r_out, self.__r_vars)
+					self.__expr.seek(0)
+					for c in eval(self.__expr.read(), {}, self.__r_vars):
+						resolver.update(c)
+					self.__expr = io.StringIO()
+				else:
+					if c == '\'':
+						self.__update = self.__update_expr_quot
+					self.__expr.write(c)
+	
+			def __update_expr_quot(self, c):
+			
+				if c == '\'':
+					self.__update = self.__update_expr
+				self.__expr.write(c)
+				
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
-		self.__out = out or self.__NoneOutput()
-		self.__err = err or self.__NoneOutput()
+		self.__out = out or NoneOutput()
+		self.__err = err or NoneOutput()
 		self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 		self.__platform_stubs = PlatformStubs()
 		
@@ -366,306 +675,4 @@ class EngineTaskCancelled(Exception):
 	def __init__(self):
 	
 		super().__init__(None)
-		
-class EngineTask:
-
-	def __init__(self, worker):
-	
-		self.__worker = worker
-		
-	def result(self, timeout=None):
-	
-		return self.__worker.result(timeout)
-		
-	def cancel(self):
-	
-		return self.__worker.cancel()
-		
-class PlatformStubs:
-
-	def __init__(self):
-	
-		self.__stubs = {}
-		self.__access_lock = threading.Lock()
-		
-	def __len__(self):
-	
-		try:
-			self.__access_lock.acquire()
-			return len(self.__stubs)
-		finally:
-			self.__access_lock.release()
-			
-	def items(self):
-	
-		try:
-			self.__access_lock.acquire()
-			yield from self.__stubs.items()
-		finally:
-			self.__access_lock.release()
-		
-	def get(self, name):
-	
-		try:
-			self.__access_lock.acquire()
-			return self.__stubs[name]
-		except KeyError:
-			raise Exception("Platform '{}' does not exist".format(name))
-		finally:
-			self.__access_lock.release()
-			
-	def put(self, name, prov, props, state_res):
-	
-		try:
-			self.__access_lock.acquire()
-			if name in self.__stubs:
-				msg = "Platform '{}' already exists".format(name)
-				raise Exception(msg)
-			data_res = state_res.parent().ref("platforms").ref(name)
-			stub = PlatformStub(prov, data_res, props)
-			self.__stubs[name] = stub
-			return stub
-		finally:
-			self.__access_lock.release()
-		
-	def remove(self, name):
-	
-		try:
-			self.__access_lock.acquire()
-			stub = self.__stubs[name]
-			del self.__stubs[name]
-			return stub
-		except KeyError:
-			raise Exception("Platform '{}' does not exist".format(name))
-		finally:
-			self.__access_lock.release()
-			
-class PlatformStub:
-
-	def __init__(self, prov, data_res, props):
-	
-		self.__prov = prov
-		self.__props = props
-		
-		try:
-			mod_name = "storm.provider.platform.{}".format(self.__prov)
-			mod = importlib.import_module(mod_name)
-			rprops = self.__resolvable(self.__props, self.__props)
-			self.__plat = mod.Platform(data_res, rprops)
-		except ImportError:
-			self.__plat = None
-			
-	def __platform(self):
-	
-		if not self.available():
-			msg = "Platform with provider '{}'".format(self.__prov)
-			msg = "{} is not available".format(msg)
-			raise LookupError(msg)
-		return self.__plat
-		
-	def __resolve(self, r_in, r_out, r_vars):
-
-		class Resolver:
-
-			def __init__(self, r_out, r_vars):
-				self.__r_out = r_out
-				self.__r_vars = r_vars
-				self.__expr = io.StringIO()
-				self.__update = self.__update_plain
-		
-			def update(self, c):
-				self.__update(c)
-		
-			def __update_plain(self, c):
-				if c == '#':
-					self.__update = self.__update_sharp
-				else:
-					self.__r_out.write(c)
-			
-			def __update_sharp(self, c):
-				if c == '{':
-					self.__update = self.__update_expr
-				else:
-					if c == '#':
-						self.__update = self.__update_sharpn
-					else:
-						self.__update = self.__update_plain
-						self.__r_out.write('#')
-					self.__r_out.write(c)
-			
-			def __update_sharpn(self, c):
-				if c != '#':
-					self.__update = self.__update_plain
-				self.__r_out.write(c)
-		
-			def __update_expr(self, c):
-				if c == '}':
-					self.__update = self.__update_plain
-					resolver = Resolver(self.__r_out, self.__r_vars)
-					self.__expr.seek(0)
-					for c in eval(self.__expr.read(), {}, self.__r_vars):
-						resolver.update(c)
-					self.__expr = io.StringIO()
-				else:
-					if c == '\'':
-						self.__update = self.__update_expr_quot
-					self.__expr.write(c)
-			
-			def __update_expr_quot(self, c):
-				if c == '\'':
-					self.__update = self.__update_expr
-				self.__expr.write(c)
-			
-		resolver = Resolver(r_out, r_vars)
-		c = r_in.read(1)
-		while len(c) > 0:
-			resolver.update(c)
-			c = r_in.read(1)
-		
-	def __resolvable(self, obj, props):
-
-		def resolvable_result(obj):
-	
-			if isinstance(obj, list):
-				return ResolvableList(obj)
-			if isinstance(obj, dict):
-				return ResolvableDict(obj)
-			if isinstance(obj, str):
-				r_in = io.StringIO(obj)
-				r_out = io.StringIO()
-				self.__resolve(r_in, r_out, props)
-				r_out.seek(0)
-				return r_out.read()
-			return obj
-		
-		class ResolvableList(list):
-	
-			def __init__(self, obj):
-		
-				self.extend(obj)
-			
-			def __getitem__(self, key):
-		
-				return resolvable_result(super().__getitem__(key))
-			
-			def __iter__(self):
-		
-				return ResolvableListIterator(super().__iter__())
-		
-			def __reversed__(self):
-		
-				return ResolvableListIterator(super().__reversed__())
-			
-		class ResolvableListIterator:
-	
-			def __init__(self, it):
-		
-				self.__it = it
-		
-			def __iter__(self):
-		
-				return self
-		
-			def __next__(self):
-		
-				return resolvable_result(self.__it.__next__())
-		
-		class ResolvableDict(dict):
-	
-			def __init__(self, obj):
-		
-				self.update(obj)
-			
-			def __getitem__(self, key):
-		
-				return resolvable_result(super().__getitem__(key))
-			
-			def __iter__(self):
-		
-				return ResolvableDictIterator(super().__iter__())
-		
-			def __reversed__(self):
-		
-				return ResolvableDictIterator(super().__reversed__())
-		
-			def items(self):
-		
-				return [
-					(key, resolvable_result(value))
-					for key, value in super().items()
-				]
-					
-		class ResolvableDictIterator:
-
-			def __init__(self, it):
-		
-				self.__it = it
-			
-			def __iter__(self):
-		
-				return self
-		
-			def __next__(self):
-		
-				return self.__it.__next__()
-			
-		return resolvable_result(obj)
-		
-	def available(self):
-	
-		return self.__plat is not None
-		
-	def provider(self):
-	
-		return self.__prov
-		
-	def properties(self):
-	
-		return self.__props
-		
-	def configure(self, context):
-	
-		return self.__platform().configure(context)
-		
-	def destroy(self, context):
-	
-		return self.__platform().destroy(context)
-		
-	def image_build(self, context, image):
-	
-		return self.__platform().image_build(context, image)
-		
-	def image_publish(self, context, image):
-	
-		return self.__platform().image_publish(context, image)
-		
-	def image_remove(self, context, image):
-	
-		return self.__platform().image_remove(context, image)
-		
-	def image_unpublish(self, context, image):
-	
-		return self.__platform().image_unpublish(context, image)
-		
-class PlatformTaskContext:
-
-	def __init__(self, worker):
-	
-		self.__worker = worker
-		
-	def dispatch(self, name, value):
-		
-		self.__worker.dispatch(name, value)
-		
-	def out(self):
-	
-		return self.__worker.out()
-		
-	def err(self):
-	
-		return self.__worker.err()
-		
-	def cancel_check(self):
-	
-		return self.__worker.cancel_check()
 
