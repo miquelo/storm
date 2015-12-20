@@ -3,32 +3,40 @@ Platform interfaces
 
 Interfaces for implementing platform provider.
 
-.. class:: Platform
+.. class:: Platform(data_res, props)
 
    Platform main interface.
    
-   .. function:: configure(context, props=None)
+   :param Resource data_res:
+      Resource holding platform data.
+   :param props:
+      Optional properties.
    
-      Creates a task for configuring this platform with the given properties.
+   .. function:: configure(context)
+   
+      Configures the platform.
       
       :param PlatformTaskContext context:
          Current platform task context.
-      :param props:
-         Dictionary with the configuration properties.
          
 .. class:: PlatformTaskContext
 
    Execution context of a platform task.
    
-   .. function:: dispatch(name, value=None)
+   .. function:: message(value)
    
-      Dispatch an engine task event.
+      Dispatch an engine task message event.
       
-      :param string name:
-         Event name.
       :param value:
-         Event value.
+         Message value.
+         
+   .. function:: progress(value)
    
+      Dispatch an engine task progress event.
+      
+      :param float value:
+         Progress value.
+         
    .. function:: out()
    
       Return the engine output stream.

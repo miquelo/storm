@@ -54,9 +54,13 @@ class Engine:
 				
 					self.__worker = worker
 					
-				def dispatch(self, name, value):
+				def message(self, value):
 				
-					self.__worker.dispatch(name, value)
+					self.__worker.message(value)
+					
+				def progress(self, value):
+				
+					self.__worker.progress(value)
 					
 				def out(self):
 				
@@ -78,14 +82,16 @@ class Engine:
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
-			
+			self.__progress_val = 0.
+			self.__progress_track = 0.
+				
 		def __task_run(self, *args, **kwargs):
 		
 			try:
 				self.dispatch("started")
-				self.progress(0)
+				self.dispatch("progress", None)
 				result = self.__task_fn(self, *args, **kwargs)
-				self.progress(1)
+				self.dispatch("progress", 1.)
 				return result
 			finally:
 				self.dispatch("finished")
@@ -132,11 +138,7 @@ class Engine:
 			cancelled = self.__future.cancel()
 			self.__cancel_check = self.__cancel_check_raise
 			return cancelled
-			
-		def dispatch(self, name, value=None):
-		
-			self.__event_queue.dispatch(self.__engine_task, name, value)
-			
+				
 		def out(self):
 		
 			return self.__out
@@ -149,9 +151,27 @@ class Engine:
 		
 			self.__cancel_check()
 			
+		def progress_track(self, track):
+		
+			self.__progress_val = self.__progress_val + self.__progress_track
+			self.__progress_track = track
+			self.progress(0.)
+			
+		def dispatch(self, name, value=None):
+		
+			self.__event_queue.dispatch(self.__engine_task, name, value)
+			
+		def message(self, value):
+		
+			self.dispatch("message", value)
+			
 		def progress(self, value):
 		
-			self.dispatch("progress", value)
+			if value is None:
+				pval = None
+			else:
+				pval = self.__progress_val + self.__progress_track * value
+			self.dispatch("progress", pval)
 			
 	def __init__(
 		self,
@@ -428,14 +448,14 @@ class Engine:
 	def __register(self, worker, name, prov, props):
 	
 		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
-		worker.progress(None)
+		worker.progress_track(1.)
 		stub.configure(worker.context())
 		
 	def __dismiss(self, worker, name, destroy):
 	
 		stub = self.__platform_stubs.remove(name)
 		if destroy:
-			worker.progress(None)
+			worker.progress_track(1.)
 			stub.destroy(worker.context())
 			
 	def __watch(self, worker, name):
