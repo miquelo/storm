@@ -22,6 +22,7 @@ Engine module.
 from storm.engine import layout
 
 from storm.module import jsons
+from storm.module import resolver
 from storm.module import resource
 
 import concurrent.futures
@@ -171,19 +172,11 @@ class Engine:
 				if isinstance(obj, str):
 					r_in = io.StringIO(obj)
 					r_out = io.StringIO()
-					resolve(r_in, r_out, props)
+					resolver.resolve(r_in, r_out, props)
 					r_out.seek(0)
 					return r_out.read()
 				return obj
 				
-			def resolve(self, r_in, r_out, r_vars):
-			
-				resolver = Resolver(r_out, r_vars)
-				c = r_in.read(1)
-				while len(c) > 0:
-					resolver.update(c)
-					c = r_in.read(1)
-					
 			class ResolvableList(list):
 			
 				def __init__(self, obj):
@@ -386,65 +379,7 @@ class Engine:
 			def image_unpublish(self, context, image):
 			
 				return self.__platform().image_unpublish(context, image)
-				
-		class Resolver:
-			
-			def __init__(self, r_out, r_vars):
-			
-				self.__r_out = r_out
-				self.__r_vars = r_vars
-				self.__expr = io.StringIO()
-				self.__update = self.__update_plain
-				
-			def update(self, c):
-			
-				self.__update(c)
-				
-			def __update_plain(self, c):
-			
-				if c == '#':
-					self.__update = self.__update_sharp
-				else:
-					self.__r_out.write(c)
-					
-			def __update_sharp(self, c):
-			
-				if c == '{':
-					self.__update = self.__update_expr
-				else:
-					if c == '#':
-						self.__update = self.__update_sharpn
-					else:
-						self.__update = self.__update_plain
-						self.__r_out.write('#')
-					self.__r_out.write(c)
-					
-			def __update_sharpn(self, c):
-			
-				if c != '#':
-					self.__update = self.__update_plain
-				self.__r_out.write(c)
-				
-			def __update_expr(self, c):
-			
-				if c == '}':
-					self.__update = self.__update_plain
-					resolver = Resolver(self.__r_out, self.__r_vars)
-					self.__expr.seek(0)
-					for c in eval(self.__expr.read(), {}, self.__r_vars):
-						resolver.update(c)
-					self.__expr = io.StringIO()
-				else:
-					if c == '\'':
-						self.__update = self.__update_expr_quot
-					self.__expr.write(c)
-	
-			def __update_expr_quot(self, c):
-			
-				if c == '\'':
-					self.__update = self.__update_expr
-				self.__expr.write(c)
-				
+						
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
 		self.__out = out or NoneOutput()

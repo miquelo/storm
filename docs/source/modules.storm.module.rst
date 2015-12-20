@@ -28,6 +28,14 @@ storm.module.properties module
    :undoc-members:
    :show-inheritance:
 
+storm.module.resolver module
+----------------------------
+
+.. automodule:: storm.module.resolver
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   
 storm.module.resource module
 ----------------------------
 
