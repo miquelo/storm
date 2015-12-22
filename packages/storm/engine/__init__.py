@@ -89,9 +89,7 @@ class Engine:
 		
 			try:
 				self.dispatch("started")
-				self.dispatch("progress", None)
 				result = self.__task_fn(self, *args, **kwargs)
-				self.dispatch("progress", 1.)
 				return result
 			finally:
 				self.dispatch("finished")
@@ -105,8 +103,11 @@ class Engine:
 			self.__cancel_check = self.__cancel_check_pass
 			raise EngineTaskCancelled()
 			
-		def context(self):
+		def context(self, progress_track):
 		
+			self.__progress_val = self.__progress_val + self.__progress_track
+			self.__progress_track = progress_track
+			self.progress(0.)
 			return self.__context
 			
 		def submit(self, executor, args, kwargs):
@@ -150,12 +151,6 @@ class Engine:
 		def cancel_check(self):
 		
 			self.__cancel_check()
-			
-		def progress_track(self, track):
-		
-			self.__progress_val = self.__progress_val + self.__progress_track
-			self.__progress_track = track
-			self.progress(0.)
 			
 		def dispatch(self, name, value=None):
 		
@@ -297,6 +292,11 @@ class Engine:
 				finally:
 					self.__access_lock.release()
 					
+			def create(self, name, prov, props, state_res):
+			
+				data_res = state_res.parent().ref("platforms").ref(name)
+				return PlatformStub(prov, data_res, props)
+				
 			def items(self):
 			
 				try:
@@ -315,17 +315,14 @@ class Engine:
 				finally:
 					self.__access_lock.release()
 					
-			def put(self, name, prov, props, state_res):
+			def put(self, name, stub):
 			
 				try:
 					self.__access_lock.acquire()
 					if name in self.__stubs:
 						msg = "Platform '{}' already exists".format(name)
 						raise Exception(msg)
-					data_res = state_res.parent().ref("platforms").ref(name)
-					stub = PlatformStub(prov, data_res, props)
 					self.__stubs[name] = stub
-					return stub
 				finally:
 					self.__access_lock.release()
 					
@@ -333,9 +330,7 @@ class Engine:
 			
 				try:
 					self.__access_lock.acquire()
-					stub = self.__stubs[name]
 					del self.__stubs[name]
-					return stub
 				except KeyError:
 					raise Exception("Platform '{}' does not exist".format(name))
 				finally:
@@ -384,22 +379,6 @@ class Engine:
 			
 				return self.__platform().destroy(context)
 				
-			def image_build(self, context, image):
-			
-				return self.__platform().image_build(context, image)
-				
-			def image_publish(self, context, image):
-			
-				return self.__platform().image_publish(context, image)
-				
-			def image_remove(self, context, image):
-			
-				return self.__platform().image_remove(context, image)
-				
-			def image_unpublish(self, context, image):
-			
-				return self.__platform().image_unpublish(context, image)
-						
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
 		self.__out = out or NoneOutput()
@@ -420,7 +399,15 @@ class Engine:
 				for name, data in state["platforms"].items():
 					prov = data["provider"]
 					props = data["properties"]
-					self.__platform_stubs.put(name, prov, props, state_res)
+					self.__platform_stubs.put(
+						name,
+						self.__platform_stubs.create(
+							name,
+							prov,
+							props,
+							state_res
+						)
+					)
 		except resource.ResourceNotFoundError:
 			pass
 			
@@ -436,27 +423,40 @@ class Engine:
 		
 	def __platforms(self, worker):
 	
-		for name, stub in self.__platform_stubs.items():
-			worker.cancel_check()
-			worker.dispatch("platform-entry", {
-				"name": name,
-				"available": stub.available(),
-				"provider": stub.provider()
-			});
-		return len(self.__platform_stubs)
+		plat_stubs_len = len(self.__platform_stubs)
+		
+		if plat_stubs_len == 0:
+			worker.context(1.)
+			worker.progress(1.)
+		else:
+			ptrack = 1. / plat_stubs_len
+			worker.context(ptrack)
+			for name, stub in self.__platform_stubs.items():
+				worker.cancel_check()
+				worker.dispatch("platform-entry", {
+					"name": name,
+					"available": stub.available(),
+					"provider": stub.provider()
+				});
+				worker.context(ptrack)
+		return plat_stubs_len
 		
 	def __register(self, worker, name, prov, props):
 	
-		stub = self.__platform_stubs.put(name, prov, props, self.__state_res)
-		worker.progress_track(1.)
-		stub.configure(worker.context())
+		state_res = self.__state_res
+		stub = self.__platform_stubs.create(name, prov, props, state_res)
+		stub.configure(worker.context(1.))
+		self.__platform_stubs.put(name, stub)
 		
 	def __dismiss(self, worker, name, destroy):
 	
-		stub = self.__platform_stubs.remove(name)
+		context = worker.context(1.)
 		if destroy:
-			worker.progress_track(1.)
-			stub.destroy(worker.context())
+			stub = self.__platform_stubs.get(name)
+			stub.destroy(context)
+		else:
+			worker.progress(1.)
+		stub = self.__platform_stubs.remove(name)
 			
 	def __watch(self, worker, name):
 	
@@ -464,15 +464,11 @@ class Engine:
 		
 	def __offer(self, worker, name, image):
 	
-		stub = self.__platform_stubs.get(name)
-		stub.image_build(worker.context(), image)
-		stub.image_publish(worker.context(), image)
+		pass
 		
 	def __retire(self, worker, name, image):
 	
-		stub = self.__platform_stubs.get(name)
-		stub.image_remove(worker.context(), image)
-		stub.image_unpublish(worker.context(), image)
+		pass
 		
 	def __emerge(self, worker, layout):
 	
