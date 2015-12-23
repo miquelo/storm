@@ -103,11 +103,8 @@ class Engine:
 			self.__cancel_check = self.__cancel_check_pass
 			raise EngineTaskCancelled()
 			
-		def context(self, progress_track):
+		def context(self):
 		
-			self.__progress_val = self.__progress_val + self.__progress_track
-			self.__progress_track = progress_track
-			self.progress(0.)
 			return self.__context
 			
 		def submit(self, executor, args, kwargs):
@@ -151,6 +148,12 @@ class Engine:
 		def cancel_check(self):
 		
 			self.__cancel_check()
+			
+		def progress_track(self, track):
+		
+			self.__progress_val = self.__progress_val + self.__progress_track
+			self.__progress_track = track
+			self.progress(0.)
 			
 		def dispatch(self, name, value=None):
 		
@@ -426,11 +429,11 @@ class Engine:
 		plat_stubs_len = len(self.__platform_stubs)
 		
 		if plat_stubs_len == 0:
-			worker.context(1.)
+			worker.progress_track(1.)
 			worker.progress(1.)
 		else:
 			ptrack = 1. / plat_stubs_len
-			worker.context(ptrack)
+			worker.progress_track(ptrack)
 			for name, stub in self.__platform_stubs.items():
 				worker.cancel_check()
 				worker.dispatch("platform-entry", {
@@ -438,22 +441,24 @@ class Engine:
 					"available": stub.available(),
 					"provider": stub.provider()
 				});
-				worker.context(ptrack)
+				worker.progress_track(ptrack)
+				
 		return plat_stubs_len
 		
 	def __register(self, worker, name, prov, props):
 	
 		state_res = self.__state_res
 		stub = self.__platform_stubs.create(name, prov, props, state_res)
-		stub.configure(worker.context(1.))
+		worker.progress_track(1.)
+		stub.configure(worker.context())
 		self.__platform_stubs.put(name, stub)
 		
 	def __dismiss(self, worker, name, destroy):
 	
-		context = worker.context(1.)
+		worker.progress_track(1.)
 		if destroy:
 			stub = self.__platform_stubs.get(name)
-			stub.destroy(context)
+			stub.destroy(worker.context())
 		else:
 			worker.progress(1.)
 		stub = self.__platform_stubs.remove(name)
