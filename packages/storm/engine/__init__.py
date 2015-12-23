@@ -374,10 +374,6 @@ class Engine:
 			
 				return self.__props
 				
-			def configure(self, context):
-			
-				return self.__platform().configure(context)
-				
 			def destroy(self, context):
 			
 				return self.__platform().destroy(context)
@@ -448,9 +444,9 @@ class Engine:
 	def __register(self, worker, name, prov, props):
 	
 		state_res = self.__state_res
-		stub = self.__platform_stubs.create(name, prov, props, state_res)
 		worker.progress_track(1.)
-		stub.configure(worker.context())
+		stub = self.__platform_stubs.create(name, prov, props, state_res)
+		worker.progress(1.)
 		self.__platform_stubs.put(name, stub)
 		
 	def __dismiss(self, worker, name, destroy):

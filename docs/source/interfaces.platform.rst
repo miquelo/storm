@@ -12,9 +12,9 @@ Interfaces for implementing platform provider.
    :param props:
       Optional properties.
    
-   .. function:: configure(context)
+   .. function:: destroy(context)
    
-      Configures the platform.
+      Destroy the platform.
       
       :param PlatformTaskContext context:
          Current platform task context.
