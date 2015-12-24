@@ -107,6 +107,10 @@ class Engine:
 		
 			return self.__context
 			
+		def work_start(self, desc):
+		
+			return self.__context.work_start(desc)
+			
 		def new_work_id(self):
 		
 			try:
@@ -180,6 +184,10 @@ class Engine:
 						"cause": cause,
 						"value": value
 					})
+					
+				def context(self):
+				
+					return self.__worker.context()
 					
 				def progress(self, amount, desc=None):
 				
@@ -425,9 +433,9 @@ class Engine:
 			
 				return self.__props
 				
-			def destroy(self, context):
+			def destroy(self, work):
 			
-				return self.__platform().destroy(context)
+				return self.__platform().destroy(work)
 				
 		self.__state_res = state_res
 		self.__event_queue = event_queue or IgnoreEventQueue()
@@ -490,7 +498,9 @@ class Engine:
 	
 		if destroy:
 			stub = self.__platform_stubs.get(name)
-			stub.destroy(worker.context())
+			work = worker.work_start("Destroying '{}' platform".format(name))
+			stub.destroy(work)
+			work.finished()
 		stub = self.__platform_stubs.remove(name)
 			
 	def __watch(self, worker, name):

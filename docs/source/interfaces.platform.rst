@@ -12,12 +12,12 @@ Interfaces for implementing platform provider.
    :param props:
       Optional properties.
    
-   .. function:: destroy(context)
+   .. function:: destroy(work)
    
       Destroy the platform.
       
-      :param PlatformTaskContext context:
-         Current platform task context.
+      :param PlatformTaskWork work:
+         Current platform task work.
          
 .. class:: PlatformTaskContext
 
@@ -68,6 +68,15 @@ Interfaces for implementing platform provider.
 
    Individual work of platform task.
    
+   .. function:: context()
+   
+      Return the current platform task context.
+      
+      :rtype:
+         PlatformTaskContext
+      :return:
+         Current context.
+         
    .. function:: progress(amount, desc=None)
    
       Dispatch a work progress event with adding the given amount.
