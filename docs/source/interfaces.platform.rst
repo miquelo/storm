@@ -30,13 +30,6 @@ Interfaces for implementing platform provider.
       :param value:
          Message value.
          
-   .. function:: progress(value)
-   
-      Dispatch an engine task progress event.
-      
-      :param float value:
-         Progress value.
-         
    .. function:: out()
    
       Return the engine output stream.
@@ -57,4 +50,30 @@ Interfaces for implementing platform provider.
       
       :raises storm.engine.EngineTaskCancelled:
          If it was already cancelled.
+         
+   .. function:: work_start(desc)
+   
+      Start a new platform task work.
+      
+      :param string desc:
+         Work description.
+      :rtype:
+         PlatformTaskWork
+      :return:
+         The started task work.
+         
+.. class:: PlatformTaskWork
+
+   Individual work of platform task.
+   
+   .. function:: progress(value)
+   
+      Dispatch a work progress event.
+      
+      :param float value:
+         Progress value.
+         
+   .. function:: finished()
+   
+      Mark this work as finished.
 

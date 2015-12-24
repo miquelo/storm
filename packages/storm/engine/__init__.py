@@ -56,11 +56,7 @@ class Engine:
 					
 				def message(self, value):
 				
-					self.__worker.message(value)
-					
-				def progress(self, value):
-				
-					self.__worker.progress(value)
+					self.__worker.dispatch("message", value)
 					
 				def out(self):
 				
@@ -74,6 +70,10 @@ class Engine:
 				
 					return self.__worker.cancel_check()
 					
+				def work_start(self, desc):
+				
+					return self.__worker.work_start(desc)
+					
 			self.__event_queue = event_queue
 			self.__task_fn = task_fn
 			self.__out = out
@@ -82,8 +82,6 @@ class Engine:
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
-			self.__progress_val = 0.
-			self.__progress_track = 0.
 				
 		def __task_run(self, *args, **kwargs):
 		
@@ -149,27 +147,31 @@ class Engine:
 		
 			self.__cancel_check()
 			
-		def progress_track(self, track):
+		def work_start(self, desc):
 		
-			self.__progress_val = self.__progress_val + self.__progress_track
-			self.__progress_track = track
-			self.progress(0.)
+			class PlatformTaskWork:
+			
+				def __init__(self, worker, work_id, desc):
+				
+					self.__worker = worker
+					self.__work_id = work_id
+					self.__desc = desc
+					
+				def progress(self, value):
+				
+					pass
+					
+				def finished(self):
+				
+					pass
+					
+			# TODO Create it with counter and its lock
+			work_id = 0
+			return PlatformTaskWork(self, work_id, desc)
 			
 		def dispatch(self, name, value=None):
 		
 			self.__event_queue.dispatch(self.__engine_task, name, value)
-			
-		def message(self, value):
-		
-			self.dispatch("message", value)
-			
-		def progress(self, value):
-		
-			if value is None:
-				pval = None
-			else:
-				pval = self.__progress_val + self.__progress_track * value
-			self.dispatch("progress", pval)
 			
 	def __init__(
 		self,
@@ -398,15 +400,13 @@ class Engine:
 				for name, data in state["platforms"].items():
 					prov = data["provider"]
 					props = data["properties"]
-					self.__platform_stubs.put(
+					stub = self.__platform_stubs.create(
 						name,
-						self.__platform_stubs.create(
-							name,
-							prov,
-							props,
-							state_res
-						)
+						prov,
+						props,
+						state_res
 					)
+					self.__platform_stubs.put(name, stub)
 		except resource.ResourceNotFoundError:
 			pass
 			
@@ -422,41 +422,26 @@ class Engine:
 		
 	def __platforms(self, worker):
 	
-		plat_stubs_len = len(self.__platform_stubs)
-		
-		if plat_stubs_len == 0:
-			worker.progress_track(1.)
-			worker.progress(1.)
-		else:
-			ptrack = 1. / plat_stubs_len
-			worker.progress_track(ptrack)
-			for name, stub in self.__platform_stubs.items():
-				worker.cancel_check()
-				worker.dispatch("platform-entry", {
-					"name": name,
-					"available": stub.available(),
-					"provider": stub.provider()
-				});
-				worker.progress_track(ptrack)
-				
-		return plat_stubs_len
+		for name, stub in self.__platform_stubs.items():
+			worker.cancel_check()
+			worker.dispatch("platform-entry", {
+				"name": name,
+				"available": stub.available(),
+				"provider": stub.provider()
+			});
+		return len(self.__platform_stubs)
 		
 	def __register(self, worker, name, prov, props):
 	
 		state_res = self.__state_res
-		worker.progress_track(1.)
 		stub = self.__platform_stubs.create(name, prov, props, state_res)
-		worker.progress(1.)
 		self.__platform_stubs.put(name, stub)
 		
 	def __dismiss(self, worker, name, destroy):
 	
-		worker.progress_track(1.)
 		if destroy:
 			stub = self.__platform_stubs.get(name)
 			stub.destroy(worker.context())
-		else:
-			worker.progress(1.)
 		stub = self.__platform_stubs.remove(name)
 			
 	def __watch(self, worker, name):
