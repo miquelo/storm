@@ -3,15 +3,33 @@ Platform interfaces
 
 Interfaces for implementing platform provider.
 
-.. class:: Platform(data_res, props)
+.. class:: Platform(base_res, props)
 
    Platform main interface.
    
-   :param Resource data_res:
+   :param Resource base_res:
       Resource holding platform data.
    :param props:
       Optional properties.
+      
+   .. function:: image_builder()
    
+      Return the platform image builder.
+      
+      :rtype:
+         ImageBuilder
+      :return:
+         The platform image builder.
+         
+   .. function:: image_repository()
+   
+      Return the platform image repository.
+      
+      :rtype:
+         ImageRepository
+      :return:
+         The platform image repository.
+         
    .. function:: destroy(work)
    
       Destroy the platform.
@@ -104,4 +122,30 @@ Interfaces for implementing platform provider.
          PlatformTaskWork
       :return:
          The started task work.
+         
+.. class:: ImageBuilder
+
+   Container image builder.
+   
+   .. function:: build(image)
+   
+      Build the given image.
+      
+      :param storm.engine.image.Image image:
+         Image to be built.
+      :rtype:
+         storm.engine.image.ImageRef
+      :return:
+         The reference of the built image.
+         
+.. class:: ImageRepository
+
+   Container image repository.
+   
+   .. function:: publish(image_ref)
+   
+      Publish the image with the given reference.
+      
+      :param storm.engine.image.ImageRef image_ref:
+         Reference of the image to be published.
 

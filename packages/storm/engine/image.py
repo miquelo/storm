@@ -16,31 +16,62 @@
 #
 
 from storm.module import jsons
+from storm.module import resource
 
 import os.path
 
 class Image:
 
-	def __init__(self, data_res, props):
+	"""
+	Container image.
 	
-		data_file = data_res.open("r")
-		data = jsons.read(data_file).value()
-		data_file.close()
+	:param storm.engine.image.ImageRef ref:
+	   Image reference.
+	:param storm.engine.image.ImageRef extends:
+	   Extended image reference, if any.
+	"""
+	
+	class __ImageResource:
+	
+		def __init__(self, source_res, target_res, props):
 		
-		image_props = {}
-		if "properties" in data:
-			util.merge_dict(image_props, data["properties"])
-		util.merge_dict(image_props, props)
-		image_data = util.resolvable(data["image"], image_props)
-		
-		self.__ref = ImageRef(image_data)
-		if "extends" in image_data:
-			self.__extends = ImageRef(image_data["extends"])
-		else:
-			self.__extends = None
+			self.__source_res = source_res
+			self.__target_res = target_res
+			self.__properties = props
 			
-		definition = image_data["definition"]
-		self.__definition = ImageDef(data_res.parent(), definition)
+		@property
+		def source_res(self):
+		
+			return self.__source_res  
+			
+		@property
+		def target_res(self):
+		
+			return self.__target_res
+			
+		@property
+		def properties(self):
+		
+			return self.__properties
+			
+	class __ImageCommand:
+	
+		def __init__(self, args):
+		
+			self.__arguments = args
+				
+		@property
+		def arguments(self):
+		
+			return self.__arguments
+			
+	def __init__(self, ref, extends=None):
+		
+		self.__ref = ref
+		self.__extends = extends
+		self.__resources = []
+		self.__provision = []
+		self.__execution = []
 		
 	@property
 	def ref(self):
@@ -52,48 +83,6 @@ class Image:
 	
 		return self.__extends
 		
-	@property
-	def definition(self):
-	
-		return self.__definition
-		
-class ImageRef:
-
-	def __init__(self, ref_data):
-	
-		self.__name = ref_data["name"]
-		if "version" in ref_data:
-			self.__version = ref_data["version"]
-		else:
-			self.__version = None
-			
-	@property
-	def name(self):
-	
-		return self.__name
-		
-	@property
-	def version(self):
-	
-		return self.__version
-		
-class ImageDef:
-
-	def __init__(self, res_parent, def_data):
-	
-		self.__resources = []
-		if "resources" in def_data:
-			for res_data in def_data["resources"]:
-				self.__resources.append(ImageResource(res_parent, res_data))
-		self.__provision = []
-		if "provision" in def_data:
-			for prov_data in def_data["provision"]:
-				self.__provision.append(ImageCommand(prov_data))
-		self.__execution = []
-		if "execution" in def_data:
-			for exec_data in def_data["execution"]:
-				self.__execution.append(ImageCommand(exec_data))
-				
 	@property
 	def resources(self):
 	
@@ -109,43 +98,59 @@ class ImageDef:
 	
 		return self.__execution
 		
-class ImageResource:
+	def resources_add(self, source_res, target_path, props):
+	
+		self.__resources.append(self.__ImageResource(
+			source_res,
+			resource.ref("image:///").ref(target_path),
+			props
+		))
+		
+	def provision_add(self, args):
+	
+		self.__provision.append(self.__ImageCommand(args))
+		
+	def execution_add(self, args):
+	
+		self.__execution.append(self.__ImageCommand(args))
+		
+class ImageRef:
 
-	def __init__(self, res_parent, res_data):
+	def __init__(self, name, version):
 	
-		# Only relative sources? => resource.ref(...) redessign
-		self.__source_res = res_parent.ref(res_data["source"])
-		self.__target = res_data["target"]
-		if "properties" in res_data:
-			self.__properties = res_data["properties"]
-		else:
-			self.__properties = {}
-			
-	@property
-	def source_res(self):
-	
-		return self.__source_res  
+		self.__name = name
+		self.__version = version
 		
 	@property
-	def target(self):
+	def name(self):
 	
-		return self.__target
+		return self.__name
 		
 	@property
-	def properties(self):
+	def version(self):
 	
-		return self.__properties
+		return self.__version
 		
-class ImageCommand:
+def load(image_res):
 
-	def __init__(self, cmd_data):
+	# data_file = data_res.open("r")
+	# data = jsons.read(data_file).value()
+	# data_file.close()
+	# 
+	# image_props = {}
+	# if "properties" in data:
+	# 	util.merge_dict(image_props, data["properties"])
+	# util.merge_dict(image_props, props)
+	# image_data = util.resolvable(data["image"], image_props)
+	# 
+	# self.__ref = ImageRef(image_data)
+	# if "extends" in image_data:
+	# 	self.__extends = ImageRef(image_data["extends"])
+	# else:
+	# 	self.__extends = None
+	# 	
+	# definition = image_data["definition"]
+	# self.__definition = ImageDef(data_res.parent(), definition)
 	
-		self.__args = []
-		for arg in cmd_data:
-			self.__args.append(arg)
-			
-	@property
-	def args(self):
-	
-		return self.__args
+	pass
 

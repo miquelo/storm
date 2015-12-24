@@ -238,95 +238,6 @@ class Engine:
 		err=None
 	):
 	
-		def resolvable(obj, props):
-		
-			def resolvable_result(obj):
-			
-				if isinstance(obj, list):
-					return ResolvableList(obj)
-				if isinstance(obj, dict):
-					return ResolvableDict(obj)
-				if isinstance(obj, str):
-					r_in = io.StringIO(obj)
-					r_out = io.StringIO()
-					resolver.resolve(r_in, r_out, props)
-					r_out.seek(0)
-					return r_out.read()
-				return obj
-				
-			class ResolvableList(list):
-			
-				def __init__(self, obj):
-				
-					self.extend(obj)
-					
-				def __getitem__(self, key):
-				
-					return resolvable_result(super().__getitem__(key))
-					
-				def __iter__(self):
-				
-					return ResolvableListIterator(super().__iter__())
-					
-				def __reversed__(self):
-				
-					return ResolvableListIterator(super().__reversed__())
-					
-			class ResolvableListIterator:
-			
-				def __init__(self, it):
-				
-					self.__it = it
-					
-				def __iter__(self):
-				
-					return self
-					
-				def __next__(self):
-				
-					return resolvable_result(self.__it.__next__())
-					
-			class ResolvableDict(dict):
-			
-				def __init__(self, obj):
-				
-					self.update(obj)
-					
-				def __getitem__(self, key):
-				
-					return resolvable_result(super().__getitem__(key))
-					
-				def __iter__(self):
-				
-					return ResolvableDictIterator(super().__iter__())
-					
-				def __reversed__(self):
-				
-					return ResolvableDictIterator(super().__reversed__())
-					
-				def items(self):
-				
-					return [
-						(key, resolvable_result(value))
-						for key, value in super().items()
-					]
-					
-			class ResolvableDictIterator:
-			
-				def __init__(self, it):
-				
-					self.__it = it
-					
-				def __iter__(self):
-				
-					return self
-					
-				def __next__(self):
-				
-					return self.__it.__next__()
-					
-			return resolvable_result(obj)
-			
 		class IgnoreEventQueue():
 		
 			def dispatch(self, task, name, value):
@@ -408,7 +319,7 @@ class Engine:
 				try:
 					mod_name = "storm.provider.platform.{}".format(self.__prov)
 					mod = importlib.import_module(mod_name)
-					rprops = resolvable(self.__props, self.__props)
+					rprops = resolver.resolvable(self.__props, self.__props)
 					self.__plat = mod.Platform(data_res, rprops)
 				except ImportError:
 					self.__plat = None
