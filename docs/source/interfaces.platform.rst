@@ -55,6 +55,8 @@ Interfaces for implementing platform provider.
    
       Start a new platform task work.
       
+      Dispatch a work started event.
+      
       :param string desc:
          Work description.
       :rtype:
@@ -66,14 +68,31 @@ Interfaces for implementing platform provider.
 
    Individual work of platform task.
    
-   .. function:: progress(value)
+   .. function:: progress(amount, desc=None)
    
-      Dispatch a work progress event.
+      Dispatch a work progress event with adding the given amount.
       
-      :param float value:
-         Progress value.
+      :param float amount:
+         Progress amount to be added.
+      :param string desc:
+         Progress description.
          
    .. function:: finished()
    
-      Mark this work as finished.
+      Dispatch a work finisehed event.
+      
+   .. function:: work_start(desc, cost)
+   
+      Start a new platform task subwork.
+      
+      Dispatch a work started event.
+      
+      :param string desc:
+         Work description.
+      :param float cost:
+         Cost of this work.
+      :rtype:
+         PlatformTaskWork
+      :return:
+         The started task work.
 

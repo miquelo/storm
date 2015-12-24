@@ -79,6 +79,8 @@ class Engine:
 			self.__out = out
 			self.__err = err
 			self.__context = PlatformTaskContext(self)
+			self.__work_id = 0
+			self.__work_id_lock = threading.Lock()
 			self.__future = None
 			self.__engine_task = None
 			self.__cancel_check = self.__cancel_check_pass
@@ -104,6 +106,15 @@ class Engine:
 		def context(self):
 		
 			return self.__context
+			
+		def new_work_id(self):
+		
+			try:
+				self.__work_id_lock.acquire()
+				return self.__work_id
+			finally:
+				self.__work_id = self.__work_id + 1
+				self.__worl_id_lock.release()
 			
 		def submit(self, executor, args, kwargs):
 		
@@ -151,23 +162,61 @@ class Engine:
 		
 			class PlatformTaskWork:
 			
-				def __init__(self, worker, work_id, desc):
+				def __init__(self, worker, desc, parent_id=None):
 				
 					self.__worker = worker
-					self.__work_id = work_id
-					self.__desc = desc
+					self.__work_id = self.__worker.new_work_id()
+					self.__progress = 0.
 					
-				def progress(self, value):
+					self.__dispatch("started", {
+						"description": desc,
+						"parent-id": parent_id
+					})
+					
+				def __dispatch(self, cause, value=None):
 				
-					pass
+					self.__worker.dispatch("work", {
+						"id": self.__work_id,
+						"cause": cause,
+						"value": value
+					})
+					
+				def progress(self, amount, desc=None):
+				
+					self.__progress = self.__progress + amount
+					self.__dispatch("progress", {
+						"description": desc,
+						"value": self.__progress
+					})
 					
 				def finished(self):
 				
-					pass
+					self.__dispatch("finished")
 					
-			# TODO Create it with counter and its lock
-			work_id = 0
-			return PlatformTaskWork(self, work_id, desc)
+				def work_start(self, desc, cost):
+				
+					return PlatformTaskWorkChild(
+						self.__worker,
+						desc,
+						self.__work_id,
+						self,
+						cost
+					)
+					
+			class PlatformTaskWorkChild(PlatformTaskWork):
+			
+				def __init__(self, worker, desc, parent_id, parent, cost):
+				
+					super().__init__(worker, desc, parent_id)
+					self.__parent = parent
+					self.__cost = cost
+					
+				def progress(self, amount, desc=None):
+				
+					self.__parent.progress(self.__cost * amount)
+					super().progress(amount, desc)
+					
+			return PlatformTaskWork(self, desc)
 			
 		def dispatch(self, name, value=None):
 		
