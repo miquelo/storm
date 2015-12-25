@@ -12,7 +12,7 @@ Interfaces for implementing platform provider.
    :param props:
       Optional properties.
       
-   .. function:: image_builder()
+   .. function:: builder()
    
       Return the platform image builder.
       
@@ -21,7 +21,7 @@ Interfaces for implementing platform provider.
       :return:
          The platform image builder.
          
-   .. function:: image_repository()
+   .. function:: repository()
    
       Return the platform image repository.
       
@@ -29,6 +29,15 @@ Interfaces for implementing platform provider.
          ImageRepository
       :return:
          The platform image repository.
+         
+   .. function:: executor()
+   
+      Return the platform container executor.
+      
+      :rtype:
+         ContainerExecutor
+      :return:
+         The platform container executor.
          
    .. function:: destroy(work)
    
@@ -127,10 +136,12 @@ Interfaces for implementing platform provider.
 
    Container image builder.
    
-   .. function:: build(image)
+   .. function:: build(work, image)
    
       Build the given image.
       
+      :param PlatformTaskWork work:
+         Current platform task work.
       :param storm.engine.image.Image image:
          Image to be built.
       :rtype:
@@ -142,10 +153,25 @@ Interfaces for implementing platform provider.
 
    Container image repository.
    
-   .. function:: publish(image_ref)
+   .. function:: publish(work, image_ref)
    
       Publish the image with the given reference.
       
+      :param PlatformTaskWork work:
+         Current platform task work.
       :param storm.engine.image.ImageRef image_ref:
          Reference of the image to be published.
+         
+.. class:: ContainerExecutor
+
+   Container executor.
+   
+   .. function:: execute(work, image_ref)
+   
+      Execute a container.
+      
+      :param PlatformTaskWork work:
+         Current platform task work.
+      :param storm.engine.image.ImageRef image_ref:
+         Image reference of the container.
 

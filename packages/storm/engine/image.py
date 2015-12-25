@@ -208,6 +208,8 @@ def load(image_res, props=None):
 		version = data["version"] if "version" in data else None
 		return ImageRef(data["name"], version)
 		
+	base_res = image_res.parent()
+	
 	image_file = image_res.open("r")
 	image_data = jsons.read(image_file).value()
 	image_file.close()
@@ -237,7 +239,7 @@ def load(image_res, props=None):
 					res_source_props = None
 				source_res = resource.ref(res_source_uri, res_source_props)
 			except:
-				source_res = image_res.ref(res_source_uri)
+				source_res = base_res.ref(res_source_uri)
 			res_target = res["target"]
 			res_props = res["properties"] if "properties" in res else None
 			image.resources.append(ImageResource(

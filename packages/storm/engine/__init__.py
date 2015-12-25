@@ -344,6 +344,18 @@ class Engine:
 			
 				return self.__props
 				
+			def builder(self):
+			
+				return self.__platform().builder()
+				
+			def repository(self):
+			
+				return self.__platform().repository()
+				
+			def executor(self):
+			
+				return self.__platform().executor()
+				
 			def destroy(self, work):
 			
 				return self.__platform().destroy(work)
@@ -416,6 +428,8 @@ class Engine:
 			
 	def __watch(self, worker, name):
 	
+		stub = self.__platform_stubs.get(name)
+		work = worker.work_start("Retrieving '{}' platform state".format(name))
 		return None
 		
 	def __offer(self, worker, name, image):

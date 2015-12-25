@@ -22,42 +22,21 @@ import os.path
 
 class Layout:
 
-	def __init__(self, data_res, props):
+	"""
+	Layout.
+	"""
 	
-		data_file = data_res.open("r")
-		data = jsons.read(data_file).value()
-		data_file.close()
-		
-		layout_props = {}
-		if "properties" in data:
-			util.merge_dict(layout_props, data["properties"])
-		util.merge_dict(layout_props, props)
-		layout_data = util.resolvable(data["layout"], layout_props)
-		
-		self.__containers = []
-		
-		#	if "containers" in layout_data:
-		#		for cont_data in layout_data["containers"]:
-		#			self.__containers.append(container.Container(cont_data))
-		
-	def destroy(self):
+	def __init__(self):
 	
 		pass
 		
 class Container:
 
-	def __init__(self, config):
+	"""
+	Container.
+	"""
 	
-		self.__image = config["image"]
-		self.__version = config["version"]
-		
-		self.__ports = {}
-		if "ports" in config:
-			for port_name, port_value in config["ports"].items():
-				self.__ports[port_name] = port_value
-				
-		self.__platform = {}
-		if "platform" in config:
-			for plat_name, plat_reg in config["platform"].items():
-				self.__platform[plat_name] = plat_reg
+	def __init__(self):
+	
+		pass
 
