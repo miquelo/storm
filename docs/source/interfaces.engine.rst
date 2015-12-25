@@ -23,28 +23,4 @@ Interfaces related with the engine.
          Event type name.
       :param value:
          Event value.
-         
-.. class:: ImageResource
-
-   Container image resource.
-   
-   .. attribute:: source_res
-   
-      Source :class:`Resource`.
-      
-   .. attribute:: target_res
-   
-      Target :class:`Resource`.
-      
-   .. attribute:: properties
-   
-      Resource properties.
-      
-.. class:: ImageCommand
-
-   Container image command.
-   
-   .. attribute:: arguments
-   
-      Command arguments.
 

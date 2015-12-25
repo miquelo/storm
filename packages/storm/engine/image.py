@@ -17,6 +17,7 @@
 
 from storm.module import jsons
 from storm.module import resource
+from storm.module import util
 
 import os.path
 
@@ -25,45 +26,11 @@ class Image:
 	"""
 	Container image.
 	
-	:param storm.engine.image.ImageRef ref:
+	:param ImageRef ref:
 	   Image reference.
-	:param storm.engine.image.ImageRef extends:
+	:param ImageRef extends:
 	   Extended image reference, if any.
 	"""
-	
-	class __ImageResource:
-	
-		def __init__(self, source_res, target_res, props):
-		
-			self.__source_res = source_res
-			self.__target_res = target_res
-			self.__properties = props
-			
-		@property
-		def source_res(self):
-		
-			return self.__source_res  
-			
-		@property
-		def target_res(self):
-		
-			return self.__target_res
-			
-		@property
-		def properties(self):
-		
-			return self.__properties
-			
-	class __ImageCommand:
-	
-		def __init__(self, args):
-		
-			self.__arguments = args
-				
-		@property
-		def arguments(self):
-		
-			return self.__arguments
 			
 	def __init__(self, ref, extends=None):
 		
@@ -76,47 +43,60 @@ class Image:
 	@property
 	def ref(self):
 	
+		"""
+		Image reference of type :class:`ImageRef`.
+		"""
+		
 		return self.__ref
 		
 	@property
 	def extends(self):
 	
+		"""
+		Extended image reference of type :class:`ImageRef`.
+		"""
+		
 		return self.__extends
 		
 	@property
 	def resources(self):
 	
+		"""
+		List of image resources of type :class:`ImageResource`.
+		"""
+		
 		return self.__resources
 		
 	@property
 	def provision(self):
 	
+		"""
+		List of image provision commands of type :class:`ImageCommand`.
+		"""
+		
 		return self.__provision
 		
 	@property
 	def execution(self):
 	
+		"""
+		List of image execution commands of type :class:`ImageCommand`.
+		"""
+		
 		return self.__execution
-		
-	def resources_add(self, source_res, target_path, props):
-	
-		self.__resources.append(self.__ImageResource(
-			source_res,
-			resource.ref("image:///").ref(target_path),
-			props
-		))
-		
-	def provision_add(self, args):
-	
-		self.__provision.append(self.__ImageCommand(args))
-		
-	def execution_add(self, args):
-	
-		self.__execution.append(self.__ImageCommand(args))
 		
 class ImageRef:
 
-	def __init__(self, name, version):
+	"""
+	Container image reference.
+	
+	:param string name:
+	   Image name.
+	:param string version:
+	   Image version.
+	"""
+	
+	def __init__(self, name, version=None):
 	
 		self.__name = name
 		self.__version = version
@@ -124,33 +104,153 @@ class ImageRef:
 	@property
 	def name(self):
 	
+		"""
+		Image name.
+		"""
+		
 		return self.__name
 		
 	@property
 	def version(self):
 	
+		"""
+		Image version.
+		"""
+		
 		return self.__version
 		
-def load(image_res):
+class ImageResource:
 
-	# data_file = data_res.open("r")
-	# data = jsons.read(data_file).value()
-	# data_file.close()
-	# 
-	# image_props = {}
-	# if "properties" in data:
-	# 	util.merge_dict(image_props, data["properties"])
-	# util.merge_dict(image_props, props)
-	# image_data = util.resolvable(data["image"], image_props)
-	# 
-	# self.__ref = ImageRef(image_data)
-	# if "extends" in image_data:
-	# 	self.__extends = ImageRef(image_data["extends"])
-	# else:
-	# 	self.__extends = None
-	# 	
-	# definition = image_data["definition"]
-	# self.__definition = ImageDef(data_res.parent(), definition)
+	"""
+	Container image resource with the given source resource, target path and
+	properties.
 	
-	pass
+	:param Resource source_res:
+	   Source resource.
+	:param string target_path:
+	   Target path.
+	:param props:
+	   Optional properties.
+	"""
+	
+	def __init__(self, source_res, target_path, props=None):
+	
+		self.__source_res = source_res
+		self.__target_path = target_path
+		self.__properties = props
+		
+	@property
+	def source_res(self):
+	
+		"""
+		Source resource.
+		"""
+		
+		return self.__source_res  
+		
+	@property
+	def target_path(self):
+	
+		"""
+		Target path.
+		"""
+		
+		return self.__target_path
+		
+	@property
+	def properties(self):
+	
+		"""
+		Optional properties.
+		"""
+		
+		return self.__properties
+		
+class ImageCommand:
+
+	"""
+	Container image command with the given resources.
+	
+	:param list args:
+	   Command arguments.
+	"""
+	
+	def __init__(self, args):
+	
+		self.__arguments = args
+		
+	@property
+	def arguments(self):
+	
+		"""
+		Command arguments.
+		"""
+		
+		return self.__arguments
+		
+def load(image_res, props=None):
+
+	"""
+	Load a container image from the given resource.
+	
+	:param Resource image_res:
+	   Image resource.
+	:param props:
+	   Optional properties.
+	:rtype:
+	   Image
+	:return:
+	   The loaded image.
+	"""
+	
+	def load_ref(data):
+	
+		version = data["version"] if "version" in data else None
+		return ImageRef(data["name"], version)
+		
+	image_file = image_res.open("r")
+	image_data = jsons.read(image_file).value()
+	image_file.close()
+	
+	image_props = {}
+	if "properties" in image_data:
+		util.merge_dict(image_props, image_data["properties"])
+	if props is not None:
+		util.merge_dict(image_props, props)
+	image_def = resolver.resolvable(image_data["definition"], image_props)
+	
+	image_ref = load_ref(image_def["ref"])
+	if "extends" in image_def:
+		image_extends = load_ref(image_def["extends"])
+	else:
+		image_extends = None
+	image = Image(image_ref, image_extends)
+	
+	if "resources" in image_def:
+		for res in image_def["resources"]:
+			res_source = res["source"]
+			res_source_uri = res_source["uri"]
+			try:
+				if "properties" in res_source:
+					res_source_props = res_source["properties"]
+				else:
+					res_source_props = None
+				source_res = resource.ref(res_source_uri, res_source_props)
+			except:
+				source_res = image_res.ref(res_source_uri)
+			res_target = res["target"]
+			res_props = res["properties"] if "properties" in res else None
+			image.resources.append(ImageResource(
+				source_res,
+				res_target,
+				res_props
+			))
+			
+	if "provision" in image_def:
+		for prov in image_def["provision"]:
+			image.provision.append(ImageCommand(prov))
+			
+	if "execution" in image_def:
+		for execut in image_def["execution"]:
+			image.execution.append(ImageCommand(execut))
 

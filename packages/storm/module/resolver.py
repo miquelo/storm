@@ -95,13 +95,15 @@ def resolve(r_in, r_out, r_vars):
 		resolver.update(c)
 		c = r_in.read(1)
 		
-def resolvable(obj):
+def resolvable(obj, props):
 
 	"""
 	Return the given object as a resolvable object.
 	
 	:param obj:
 	   Object to be transformed to a resolvable object.
+	:param props:
+	   Resolve properties.
 	:return:
 	   Object as a resolvable object.
 	"""
