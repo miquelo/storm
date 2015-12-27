@@ -35,6 +35,7 @@ class Image:
 		
 		self.__ref = ref
 		self.__extends = extends
+		self.__ports = []
 		self.__resources = []
 		self.__provision = []
 		self.__execution = []
@@ -58,10 +59,19 @@ class Image:
 		return self.__extends
 		
 	@property
+	def ports(self):
+	
+		"""
+		List of :class:`ImagePort` values to be exposed.
+		"""
+		
+		return self.__ports
+		
+	@property
 	def resources(self):
 	
 		"""
-		List of image resources of type :class:`ImageResource`.
+		List of :class:`ImageResource` values.
 		"""
 		
 		return self.__resources
@@ -70,7 +80,7 @@ class Image:
 	def provision(self):
 	
 		"""
-		List of image provision commands of type :class:`ImageCommand`.
+		List of :class:`ImageCommand` values for provisioning.
 		"""
 		
 		return self.__provision
@@ -79,7 +89,7 @@ class Image:
 	def execution(self):
 	
 		"""
-		List of image execution commands of type :class:`ImageCommand`.
+		List of :class:`ImageCommand` values for execution.
 		"""
 		
 		return self.__execution
@@ -117,6 +127,52 @@ class ImageRef:
 		"""
 		
 		return self.__version
+		
+class ImagePort:
+
+	"""
+	Port exposed by an image.
+	
+	:param string name:
+	   Port name.
+	:param int value:
+	   Port value.
+	:param string proto:
+	   Tranport protocol. By default it is "tcp".
+	"""
+	
+	def __init__(self, name, value, proto=None):
+	
+		self.__name = name
+		self.__value = value
+		self.__protocol = proto
+		
+	@property
+	def name(self):
+	
+		"""
+		Port name.
+		"""
+		
+		return self.__name
+		
+	@property
+	def value(self):
+	
+		"""
+		Port value.
+		"""
+		
+		return self.__value
+		
+	@property
+	def protocol(self):
+	
+		"""
+		Transport protocol.
+		"""
+		
+		return self.__value
 		
 class ImageResource:
 
@@ -202,6 +258,19 @@ def load(base_res, image_data, props=None):
 	   Image
 	:return:
 	   The loaded image.
+	   
+	An example:
+	
+	.. code-block:: json
+	
+	   {
+	       "properties": {
+	       },
+	       "image": {
+	       }
+	   }
+	   
+	Data dictionary will be treated as a resolvable one.
 	"""
 	
 	def load_ref(data):

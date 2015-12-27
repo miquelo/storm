@@ -76,25 +76,25 @@ class ContainerPort:
 	"""
 	Port of container service.
 	
-	:param int value:
-	   Port value.
+	:param string value:
+	   Port name.
 	:param string service_name:
 	   Service name.
 	"""
 	
-	def __init__(self, value, service_name):
+	def __init__(self, name, service_name):
 	
-		self.__value = value
+		self.__name = name
 		self.__service_name = service_name
 		
 	@property
-	def value(self):
+	def name(self):
 	
 		"""
-		Port value.
+		Port name.
 		"""
 		
-		return self.__value
+		return self.__name
 		
 	@property
 	def service_name():
@@ -256,41 +256,50 @@ def load(layout_data, props=None):
 	
 	.. code-block:: json
 	
-		{
-		    "containers" : {
-		        "members-service-01": {
-		            "image": {
-		                "name": "members-service",
-		                "version": "2.3"
-		            },
-		            "ports": [
-		                {
-		                    "value": "80",
-		                    "service": "members"
-		                }
-		            ]
-		        }
-		    },
-		    "volumes": {
-		        "members-volume-01": {
-		            "storage": "local",
-		            "size": "8Gb"
-		        }
-		    },
-		    "executions": [
-		        {
-		            "container": "members-service-01",
-		            "platform": "local",
-		            "configuration": {
-		                "volumes": {
-		                    "volume": "members-volume-01",
-		                    "path": "/var/database"
-		                }
-		            }
-		        }
-		    ]
-		}
-		
-	It may have resolvable fragments.
+	   {
+	       "properties": {
+	           "main_platform": {
+	               "name": "local",
+	               "enabled": "true"
+	           }
+	       },
+	       "layout": {
+	           "containers": {
+	               "members-service-01": {
+	                   "image": {
+	                       "name": "members-service",
+	                       "version": "2.3"
+	                   },
+	                   "ports": [
+	                       {
+	                           "name": "http",
+	                           "service": "members"
+	                       }
+	                   ]
+	               }
+	           },
+	           "volumes": {
+	               "members-volume-01": {
+	                   "storage": "local",
+	                   "size": "8Gb"
+	               }
+	           },
+	           "executions": [
+	               {
+	                   "container": "members-service-01",
+	                   "platform": "#{main_platform['name']}",
+	                   "configuration": {
+	                       "volumes": {
+	                           "volume": "members-volume-01",
+	                           "path": "/var/database"
+	                       }
+	                   },
+	                   "enabled": "#{main_platform['enabled']}"
+	               }
+	           ]
+	       }
+	   }
+	   
+	Data dictionary will be treated as a resolvable one.
 	"""
 
