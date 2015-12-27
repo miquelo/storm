@@ -279,14 +279,14 @@ def load(layout_data, props=None):
 		    },
 		    "executions": [
 		        {
-		        	"container": "members-service-01",
-		        	"platform": "local",
-		        	"configuration": {
-		        		"volumes": {
-		        			"volume": "members-volume-01",
-		        			"path": "/var/database"
-		        		}
-		        	}
+		            "container": "members-service-01",
+		            "platform": "local",
+		            "configuration": {
+		                "volumes": {
+		                    "volume": "members-volume-01",
+		                    "path": "/var/database"
+		                }
+		            }
 		        }
 		    ]
 		}
