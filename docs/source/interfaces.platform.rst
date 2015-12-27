@@ -166,12 +166,14 @@ Interfaces for implementing platform provider.
 
    Container executor.
    
-   .. function:: execute(work, image_ref)
+   .. function:: setup(work, cont, config)
    
       Execute a container.
       
       :param PlatformTaskWork work:
          Current platform task work.
-      :param storm.engine.image.ImageRef image_ref:
-         Image reference of the container.
+      :param storm.engine.layout.Container cont:
+         Container to be executed.
+      :param storm.engine.layout.ContainerSetupConfig config:
+         Setup configuration.
 
