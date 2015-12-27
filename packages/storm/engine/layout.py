@@ -28,16 +28,16 @@ class Layout:
 	
 	def __init__(self):
 	
-		self.__containers = []
+		self.__executions = []
 		
 	@property
-	def containers(self):
+	def executions(self):
 	
 		"""
-		List of :class:`ContainerSetup` values.
+		List of :class:`ContainerExecution` values.
 		"""
 		
-		return self.__containers
+		return self.__executions
 		
 class Container:
 
@@ -52,7 +52,6 @@ class Container:
 	
 		self.__image_ref = image_ref
 		self.__ports = []
-		self.__volumes = []
 		
 	@property
 	def image_ref(self):
@@ -71,15 +70,6 @@ class Container:
 		"""
 		
 		return self.__ports
-		
-	@property
-	def volumes(self):
-	
-		"""
-		List of :class:`VolumeMount` values.
-		"""
-		
-		return self.__volumes
 		
 class ContainerPort:
 
@@ -115,16 +105,16 @@ class ContainerPort:
 		
 		return self.__service_name
 		
-class ContainerSetup:
+class ContainerExecution:
 	
 	"""
-	Container setup for a platform.
+	Container execution for a platform.
 	
 	:param Container cont:
 	   Container involved in this setup process.
 	:param string plat_name:
 	   Name of the target platform.
-	:param ContainerSetupConfig config:
+	:param ContainerExecutionConfig config:
 	   Setup configuration.
 	"""
 	
@@ -161,24 +151,59 @@ class ContainerSetup:
 		
 		return self.__configuration
 		
-class ContainerSetupConfig:
+class ContainerExecutionConfig:
 
 	"""
-	Container setup configuration.
+	Container execution configuration.
 	"""
 	
 	def __init__(self):
 	
-		pass
+		self.__volumes = []
+		
+	@property
+	def volumes(self):
+	
+		"""
+		List of :class:`VolumeMount` values.
+		"""
+		
+		return self.__volumes
 		
 class Volume:
 
 	"""
 	Volume.
+	
+	:param string stor_type:
+	   Storage type.
+	:param int size:
+	   Available size.
 	"""
 	
-	pass
+	def __init__(self, stor_type, size):
 	
+		self.__storage_type = stor_type
+		self.__size = size
+		
+	@property
+	def storage_type(self):
+	
+		"""
+		Storage type.
+		"""
+		
+		return self.__storage_type
+		
+	@property
+	def size(self):
+	
+		"""
+		Available size.
+		"""
+		
+		return self.__size
+		
 class VolumeMount:
 
 	"""
@@ -213,18 +238,59 @@ class VolumeMount:
 		
 		return self.__path
 		
-def load(layout_res, props=None):
+def load(layout_data, props=None):
 
 	"""
-	Load a layout from the given resource.
+	Load a layout from the given data dictionary.
 	
-	:param Resource layout_res:
-	   Layout resource.
+	:param dict layout_data:
+	   Dictionary with layout data.
 	:param props:
 	   Optional properties.
 	:rtype:
 	   Layout
 	:return:
 	   The loaded layout.
+	   
+	An example:
+	
+	.. code-block:: json
+	
+		{
+		    "containers" : {
+		        "members-service-01": {
+		            "image": {
+		                "name": "members-service",
+		                "version": "2.3"
+		            },
+		            "ports": [
+		                {
+		                    "value": "80",
+		                    "service": "members"
+		                }
+		            ]
+		        }
+		    },
+		    "volumes": {
+		        "members-volume-01": {
+		            "storage": "local",
+		            "size": "8Gb"
+		        }
+		    },
+		    "executions": [
+		        {
+		        	"container": "members-service-01",
+		        	"platform": "local",
+		        	"configuration": {
+		        		"volumes": {
+		        			"volume": "members-volume-01",
+		        			"path": "/var/database"
+		        		}
+		        	}
+		        }
+		    ]
+		}
+		
+	It may have resolvable fragments.
 	"""
 

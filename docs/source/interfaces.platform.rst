@@ -166,7 +166,7 @@ Interfaces for implementing platform provider.
 
    Container executor.
    
-   .. function:: setup(work, cont, config)
+   .. function:: execute(work, cont, config)
    
       Execute a container.
       
@@ -174,6 +174,6 @@ Interfaces for implementing platform provider.
          Current platform task work.
       :param storm.engine.layout.Container cont:
          Container to be executed.
-      :param storm.engine.layout.ContainerSetupConfig config:
-         Setup configuration.
+      :param storm.engine.layout.ContainerExecutionConfig config:
+         Execution configuration.
 

@@ -15,7 +15,6 @@
 # along with STORM.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from storm.module import jsons
 from storm.module import resource
 from storm.module import util
 
@@ -188,13 +187,15 @@ class ImageCommand:
 		
 		return self.__arguments
 		
-def load(image_res, props=None):
+def load(base_res, image_data, props=None):
 
 	"""
-	Load a container image from the given resource.
+	Load a container image from the given data dictionary.
 	
-	:param Resource image_res:
-	   Image resource.
+	:param Resource base_res:
+	   Base resource.
+	:param dict image_data:
+	   Dictionary with image data.
 	:param props:
 	   Optional properties.
 	:rtype:
@@ -208,12 +209,6 @@ def load(image_res, props=None):
 		version = data["version"] if "version" in data else None
 		return ImageRef(data["name"], version)
 		
-	base_res = image_res.parent()
-	
-	image_file = image_res.open("r")
-	image_data = jsons.read(image_file).value()
-	image_file.close()
-	
 	image_props = {}
 	if "properties" in image_data:
 		util.merge_dict(image_props, image_data["properties"])
