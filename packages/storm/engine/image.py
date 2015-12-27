@@ -267,6 +267,48 @@ def load(base_res, image_data, props=None):
 	       "properties": {
 	       },
 	       "image": {
+	           "name": "members-service",
+	           "version": "2.3",
+	           "extends": {
+	               "name": "rest-service",
+	               "version": "1.4"
+	           },
+	           "ports": [
+	               {
+	                   "name": "http",
+	                   "value": 80
+	               }
+	           ],
+	           "resources": [
+	               {
+	                   "source": {
+	                       "uri": ""
+	                   },
+	                   "target": "",
+	                   "properties": {
+	                   }
+	               },
+	               {
+	                   "source": {
+	                       "uri": "",
+	                       "properties": {
+	                       }
+	                   },
+	                   "target": "",
+	                   "properties": {
+	                   }
+	               }
+	           ],
+	           "provision": [
+	               {
+	                   "arguments": []
+	               }
+	           ],
+	           "execution": [
+	               {
+	                   "arguments": []
+	               }
+	           ]
 	       }
 	   }
 	   
@@ -283,9 +325,9 @@ def load(base_res, image_data, props=None):
 		util.merge_dict(image_props, image_data["properties"])
 	if props is not None:
 		util.merge_dict(image_props, props)
-	image_def = resolver.resolvable(image_data["definition"], image_props)
+	image_def = resolver.resolvable(image_data["image"], image_props)
 	
-	image_ref = load_ref(image_def["ref"])
+	image_ref = load_ref(image_data)
 	if "extends" in image_def:
 		image_extends = load_ref(image_def["extends"])
 	else:
