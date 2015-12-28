@@ -7,6 +7,7 @@ Here there are all interfaces involved in STORM project.
    :maxdepth: 4
    
    interfaces.engine
+   interfaces.module
    interfaces.platform
    interfaces.resource
 

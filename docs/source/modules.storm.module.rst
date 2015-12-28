@@ -11,14 +11,6 @@ storm.module.jsons module
    :members:
    :undoc-members:
    :show-inheritance:
-
-storm.module.platform module
-----------------------------
-
-.. automodule:: storm.module.platform
-   :members:
-   :undoc-members:
-   :show-inheritance:
    
 storm.module.properties module
 ------------------------------
